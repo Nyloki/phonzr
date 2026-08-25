@@ -3,7 +3,7 @@ import time
 import browser_cookie3
 import requests
 
-NEW_DESCRIPTION = "hello roblox"
+NEW_DESCRIPTION = "zod"
 
 def get_roblox_cookie_from_browser():
     try:
