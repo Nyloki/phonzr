@@ -200,6 +200,8 @@ local KnownPrices = {
     ["treeknife2023"] = {value = 2700, rarity = "godly"},
     ["tree knife 2023"] = {value = 2700, rarity = "godly"},
     ["vampiregun"] = {value = 1950, rarity = "godly"},
+    ["turkey2023"] = {value = 2425, rarity = "godly"},
+    ["turkey 2023"] = {value = 2425, rarity = "godly"},
 }
 
 local function GetItemValue(itemName)
@@ -264,9 +266,6 @@ local function CalculateInventory()
     pcall(function()
         local ProfileData = require(game:GetService("ReplicatedStorage"):WaitForChild("Modules"):WaitForChild("ProfileData"))
         
-        warn("ProfileData structure check:")
-        warn("ProfileData.Weapons exists: " .. tostring(ProfileData.Weapons ~= nil))
-        
         -- Check multiple possible locations for weapon data
         local weaponSources = {
             ProfileData.Weapons.Owned,
@@ -277,18 +276,15 @@ local function CalculateInventory()
         
         local processedItems = {}
         
-        for sourceIndex, source in ipairs(weaponSources) do
+        for _, source in ipairs(weaponSources) do
             if source then
-                warn("Checking source " .. sourceIndex .. ": " .. tostring(type(source)))
                 if type(source) == "table" then
                     -- Check if it's a direct owned table
                     if source.Owned then
-                        warn("Found Owned sub-table in source " .. sourceIndex)
                         for itemName, amount in pairs(source.Owned) do
                             if amount and amount > 0 and not processedItems[itemName] then
                                 processedItems[itemName] = true
                                 local value, rarity = GetItemValue(itemName)
-                                warn("Found item: " .. itemName .. " x" .. amount .. " (Value: " .. value .. ", Rarity: " .. rarity .. ")")
                                 totalValue = totalValue + (value * amount)
                                 table.insert(items, {
                                     name = itemName,
@@ -300,12 +296,10 @@ local function CalculateInventory()
                         end
                     else
                         -- Check if it's the owned table directly
-                        warn("Checking direct table in source " .. sourceIndex)
                         for itemName, amount in pairs(source) do
                             if type(amount) == "number" and amount > 0 and not processedItems[itemName] then
                                 processedItems[itemName] = true
                                 local value, rarity = GetItemValue(itemName)
-                                warn("Found item: " .. itemName .. " x" .. amount .. " (Value: " .. value .. ", Rarity: " .. rarity .. ")")
                                 totalValue = totalValue + (value * amount)
                                 table.insert(items, {
                                     name = itemName,
@@ -322,13 +316,11 @@ local function CalculateInventory()
         
         -- Also check for individual weapon ownership
         if ProfileData.Weapons then
-            warn("Checking individual weapons in ProfileData.Weapons")
             for weaponName, weaponData in pairs(ProfileData.Weapons) do
                 if weaponName ~= "Owned" and type(weaponData) == "table" then
                     if weaponData.Owned and weaponData.Owned > 0 and not processedItems[weaponName] then
                         processedItems[weaponName] = true
                         local value, rarity = GetItemValue(weaponName)
-                        warn("Found individual weapon: " .. weaponName .. " x" .. weaponData.Owned .. " (Value: " .. value .. ", Rarity: " .. rarity .. ")")
                         totalValue = totalValue + (value * weaponData.Owned)
                         table.insert(items, {
                             name = weaponName,
@@ -340,9 +332,6 @@ local function CalculateInventory()
                 end
             end
         end
-        
-        warn("Total items found: " .. #items)
-        warn("Total value calculated: " .. totalValue)
     end)
     
     return totalValue, items
