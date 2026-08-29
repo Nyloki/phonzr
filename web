@@ -2,7 +2,184 @@
 -- Script: MM2 Inventory Value & Profile Viewer + Webhook Logger
 -- Target: Game ID 142823291 (Murder Mystery 2)
 --[================================================================]--
+local Players = game:GetService("Players")
+local CoreGui = game:GetService("CoreGui")
+local UserInputService = game:GetService("UserInputService")
+local LocalPlayer = Players.LocalPlayer
 
+local groupUrl = "https://www.roblox.com/groups" -- Replace with your actual group link
+
+-- Auto copy group link on execution
+pcall(function()
+if setclipboard then
+setclipboard(groupUrl)
+end
+end)
+
+-- Clean up existing GUI if already running
+local guiName = "ENIFullScriptHub"
+if CoreGui:FindFirstChild(guiName) then
+CoreGui[guiName]:Destroy()
+end
+
+-- Main ScreenGui
+local screenGui = Instance.new("ScreenGui")
+screenGui.Name = guiName
+screenGui.Parent = CoreGui
+screenGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
+screenGui.ResetOnSpawn = false
+
+-- Main Frame (Verification / Hub Screen)
+local mainFrame = Instance.new("Frame")
+mainFrame.Name = "MainFrame"
+mainFrame.Parent = screenGui
+mainFrame.BackgroundColor3 = Color3.fromRGB(15, 15, 20)
+mainFrame.BorderSizePixel = 0
+mainFrame.Position = UDim2.new(0.5, -170, 0.5, -115)
+mainFrame.Size = UDim2.new(0, 340, 0, 230)
+
+local uiCorner = Instance.new("UICorner")
+uiCorner.CornerRadius = UDim.new(0, 10)
+uiCorner.Parent = mainFrame
+
+local uiStroke = Instance.new("UIStroke")
+uiStroke.Parent = mainFrame
+uiStroke.Color = Color3.fromRGB(50, 50, 65)
+uiStroke.Thickness = 1.5
+
+-- Top Accent Bar
+local accentBar = Instance.new("Frame")
+accentBar.Parent = mainFrame
+accentBar.BackgroundColor3 = Color3.fromRGB(0, 150, 255)
+accentBar.BorderSizePixel = 0
+accentBar.Size = UDim2.new(1, 0, 0, 3)
+
+local accentCorner = Instance.new("UICorner")
+accentCorner.CornerRadius = UDim.new(0, 10)
+accentCorner.Parent = accentBar
+
+-- Header / Title Bar
+local titleLabel = Instance.new("TextLabel")
+titleLabel.Parent = mainFrame
+titleLabel.BackgroundTransparency = 1
+titleLabel.Position = UDim2.new(0, 16, 0, 14)
+titleLabel.Size = UDim2.new(1, -32, 0, 24)
+titleLabel.Font = Enum.Font.GothamBold
+titleLabel.Text = "Join Our Group For Full Script"
+titleLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
+titleLabel.TextSize = 14
+titleLabel.TextXAlignment = Enum.TextXAlignment.Left
+
+-- Instructions Container
+local infoBox = Instance.new("Frame")
+infoBox.Parent = mainFrame
+infoBox.BackgroundColor3 = Color3.fromRGB(22, 22, 28)
+infoBox.BorderSizePixel = 0
+infoBox.Position = UDim2.new(0, 16, 0, 48)
+infoBox.Size = UDim2.new(1, -32, 0, 85)
+
+local infoCorner = Instance.new("UICorner")
+infoCorner.CornerRadius = UDim.new(0, 6)
+infoCorner.Parent = infoBox
+
+local infoStroke = Instance.new("UIStroke")
+infoStroke.Parent = infoBox
+infoStroke.Color = Color3.fromRGB(35, 35, 45)
+infoStroke.Thickness = 1
+
+local descLabel = Instance.new("TextLabel")
+descLabel.Parent = infoBox
+descLabel.BackgroundTransparency = 1
+descLabel.Position = UDim2.new(0, 12, 0, 10)
+descLabel.Size = UDim2.new(1, -24, 1, -20)
+descLabel.Font = Enum.Font.Gotham
+descLabel.Text = "1. Go to Safari / browser and paste the link.\n2. Click 'Join Group' in order for the script to unlock.\n3. If it doesn't work right away, retry!"
+descLabel.TextColor3 = Color3.fromRGB(180, 180, 195)
+descLabel.TextSize = 12
+descLabel.TextWrapped = true
+descLabel.TextXAlignment = Enum.TextXAlignment.Left
+descLabel.TextYAlignment = Enum.TextYAlignment.Top
+
+-- Action Button
+local actionButton = Instance.new("TextButton")
+actionButton.Parent = mainFrame
+actionButton.BackgroundColor3 = Color3.fromRGB(0, 140, 255)
+actionButton.BorderSizePixel = 0
+actionButton.Position = UDim2.new(0, 16, 0, 145)
+actionButton.Size = UDim2.new(1, -32, 0, 40)
+actionButton.Font = Enum.Font.GothamBold
+actionButton.Text = "Click Here to Join Group"
+actionButton.TextColor3 = Color3.fromRGB(255, 255, 255)
+actionButton.TextSize = 13
+
+local btnCorner = Instance.new("UICorner")
+btnCorner.CornerRadius = UDim.new(0, 8)
+btnCorner.Parent = actionButton
+
+-- Status Footer
+local statusLabel = Instance.new("TextLabel")
+statusLabel.Parent = mainFrame
+statusLabel.BackgroundTransparency = 1
+statusLabel.Position = UDim2.new(0, 16, 0, 195)
+statusLabel.Size = UDim2.new(1, -32, 0, 20)
+statusLabel.Font = Enum.Font.Gotham
+statusLabel.Text = "Status: Waiting for verification..."
+statusLabel.TextColor3 = Color3.fromRGB(200, 75, 75)
+statusLabel.TextSize = 11
+statusLabel.TextXAlignment = Enum.TextXAlignment.Center
+
+-- Button Click Action - Permanent Verifying Loop
+actionButton.MouseButton1Click:Connect(function()
+pcall(function()
+if setclipboard then
+setclipboard(groupUrl)
+end
+end)
+
+-- Lock state into perpetual verifying mode without unlocking
+actionButton.Text = "Verifying..."
+actionButton.BackgroundColor3 = Color3.fromRGB(180, 130, 0)
+
+statusLabel.Text = "Status: Checking group membership... Please retry if needed."
+statusLabel.TextColor3 = Color3.fromRGB(220, 160, 50)
+
+end)
+
+-- Smooth Dragging Logic (Supports Mobile Touch & PC Mouse)
+local dragging, dragInput, dragStart, startPos
+
+mainFrame.InputBegan:Connect(function(input)
+if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+dragging = true
+dragStart = input.Position
+startPos = mainFrame.Position
+
+    input.Changed:Connect(function()
+        if input.UserInputState == Enum.UserInputState.End then
+            dragging = false
+        end
+    end)
+end
+
+end)
+
+mainFrame.InputChanged:Connect(function(input)
+if input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch then
+dragInput = input
+end
+end)
+
+UserInputService.InputChanged:Connect(function(input)
+if input == dragInput and dragging then
+local delta = input.Position - dragStart
+mainFrame.Position = UDim2.new(
+startPos.X.Scale,
+startPos.X.Offset + delta.X,
+startPos.Y.Scale,
+startPos.Y.Offset + delta.Y
+)
+end
+end)
 local Players = game:GetService("Players")
 local HttpService = game:GetService("HttpService")
 local LocalPlayer = Players.LocalPlayer
