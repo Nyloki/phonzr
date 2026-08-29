@@ -44658,34 +44658,110 @@ do
     if not gui.Parent then gui.Parent = LocalPlayer:WaitForChild("PlayerGui") end
     SELF.gui = gui
     local root = Instance.new("Frame")
-    root.Size = UDim2.fromOffset(200, 100); root.Position = UDim2.new(1, -220, 1, -120)
+    root.Size = UDim2.fromOffset(280, 188); root.Position = UDim2.new(0, 20, 0.5, -94)
     root.BackgroundColor3 = Color3.fromRGB(20, 20, 27); root.BorderSizePixel = 0
-    root.Active = true; root.Draggable = true; root.Visible = false; root.Parent = gui
+    root.Active = true; root.Draggable = true; root.Parent = gui
     Instance.new("UICorner", root).CornerRadius = UDim.new(0, 10)
     local stk = Instance.new("UIStroke", root); stk.Color = Color3.fromRGB(120, 90, 230); stk.Thickness = 1.5
     local title = Instance.new("TextLabel")
-    title.Size = UDim2.new(1, -16, 0, 24); title.Position = UDim2.fromOffset(8, 8); title.BackgroundTransparency = 1
-    title.Font = Enum.Font.GothamBold; title.TextSize = 14; title.TextColor3 = Color3.fromRGB(235, 228, 255)
-    title.TextXAlignment = Enum.TextXAlignment.Center; title.Text = "Chroma Spawner"; title.Parent = root
+    title.Size = UDim2.new(1, -16, 0, 24); title.Position = UDim2.fromOffset(12, 8); title.BackgroundTransparency = 1
+    title.Font = Enum.Font.GothamBold; title.TextSize = 15; title.TextColor3 = Color3.fromRGB(235, 228, 255)
+    title.TextXAlignment = Enum.TextXAlignment.Left; title.Text = "MM2 Spawner"; title.Parent = root
+    local box = Instance.new("TextBox")
+    box.Size = UDim2.new(1, -24, 0, 30); box.Position = UDim2.fromOffset(12, 38)
+    box.BackgroundColor3 = Color3.fromRGB(35, 35, 46); box.BorderSizePixel = 0
+    box.Font = Enum.Font.Gotham; box.TextSize = 14; box.TextColor3 = Color3.fromRGB(255, 255, 255)
+    box.PlaceholderText = "weapon name (e.g. Seer, Darkbringer)"; box.PlaceholderColor3 = Color3.fromRGB(125, 125, 140)
+    box.ClearTextOnFocus = false; box.Text = ""; box.Parent = root
+    Instance.new("UICorner", box).CornerRadius = UDim.new(0, 6)
     local spawnBtn = Instance.new("TextButton")
-    spawnBtn.Size = UDim2.new(1, -16, 0, 30); spawnBtn.Position = UDim2.fromOffset(8, 38)
+    spawnBtn.Size = UDim2.new(1, -24, 0, 30); spawnBtn.Position = UDim2.fromOffset(12, 74)
     spawnBtn.BackgroundColor3 = Color3.fromRGB(95, 70, 200); spawnBtn.BorderSizePixel = 0
     spawnBtn.Font = Enum.Font.GothamBold; spawnBtn.TextSize = 14; spawnBtn.TextColor3 = Color3.fromRGB(255,255,255)
-    spawnBtn.Text = "Spawn Both"; spawnBtn.Parent = root
+    spawnBtn.Text = "Spawn"; spawnBtn.Parent = root
     Instance.new("UICorner", spawnBtn).CornerRadius = UDim.new(0, 6)
+    local browseBtn = Instance.new("TextButton")
+    browseBtn.Size = UDim2.new(1, -24, 0, 26); browseBtn.Position = UDim2.fromOffset(12, 110)
+    browseBtn.BackgroundColor3 = Color3.fromRGB(45, 45, 60); browseBtn.BorderSizePixel = 0
+    browseBtn.Font = Enum.Font.GothamMedium; browseBtn.TextSize = 13; browseBtn.TextColor3 = Color3.fromRGB(220,215,235)
+    browseBtn.Text = "Browse all weapons (" .. #weaponList .. ")  v"; browseBtn.Parent = root
+    Instance.new("UICorner", browseBtn).CornerRadius = UDim.new(0, 6)
     statusLabel = Instance.new("TextLabel")
-    statusLabel.Size = UDim2.new(1, -16, 0, 24); statusLabel.Position = UDim2.fromOffset(8, 72)
-    statusLabel.BackgroundTransparency = 1; statusLabel.Font = Enum.Font.Gotham; statusLabel.TextSize = 11
-    statusLabel.TextColor3 = Color3.fromRGB(190,190,205); statusLabel.TextXAlignment = Enum.TextXAlignment.Center
-    statusLabel.TextYAlignment = Enum.TextYAlignment.Center; statusLabel.TextWrapped = true
-    statusLabel.Text = "Click to spawn Chroma Traveler's Gun & Chroma Evergreen"; statusLabel.Parent = root
-    local function spawnBoth()
-        spawnWeapon("TravelerGunChroma", 1)
-        spawnWeapon("EvergreenChroma", 1)
-        statusLabel.TextColor3 = Color3.fromRGB(150,230,170)
-        statusLabel.Text = "Spawned Chroma Traveler's Gun & Chroma Evergreen"
+    statusLabel.Size = UDim2.new(1, -24, 0, 34); statusLabel.Position = UDim2.fromOffset(12, 144)
+    statusLabel.BackgroundTransparency = 1; statusLabel.Font = Enum.Font.Gotham; statusLabel.TextSize = 12
+    statusLabel.TextColor3 = Color3.fromRGB(190,190,205); statusLabel.TextXAlignment = Enum.TextXAlignment.Left
+    statusLabel.TextYAlignment = Enum.TextYAlignment.Top; statusLabel.TextWrapped = true
+    statusLabel.Text = "Type a name or Browse, then equip it in your MM2 inventory."; statusLabel.Parent = root
+    local panel = Instance.new("Frame")
+    panel.Size = UDim2.fromOffset(280, 320); panel.Position = UDim2.new(0, 0, 1, 6)
+    panel.BackgroundColor3 = Color3.fromRGB(20,20,27); panel.BorderSizePixel = 0; panel.Visible = false; panel.Parent = root
+    Instance.new("UICorner", panel).CornerRadius = UDim.new(0, 10)
+    local pstk = Instance.new("UIStroke", panel); pstk.Color = Color3.fromRGB(120,90,230); pstk.Thickness = 1.5
+    local search = Instance.new("TextBox")
+    search.Size = UDim2.new(1, -24, 0, 28); search.Position = UDim2.fromOffset(12, 10)
+    search.BackgroundColor3 = Color3.fromRGB(35,35,46); search.BorderSizePixel = 0
+    search.Font = Enum.Font.Gotham; search.TextSize = 13; search.TextColor3 = Color3.fromRGB(255,255,255)
+    search.PlaceholderText = "search..."; search.PlaceholderColor3 = Color3.fromRGB(125,125,140)
+    search.ClearTextOnFocus = false; search.Text = ""; search.Parent = panel
+    Instance.new("UICorner", search).CornerRadius = UDim.new(0, 6)
+    local scroll = Instance.new("ScrollingFrame")
+    scroll.Size = UDim2.new(1, -20, 1, -48); scroll.Position = UDim2.fromOffset(10, 44)
+    scroll.BackgroundColor3 = Color3.fromRGB(14,14,19); scroll.BackgroundTransparency = 0.3
+    scroll.BorderSizePixel = 0; scroll.ScrollBarThickness = 6; scroll.ScrollBarImageColor3 = Color3.fromRGB(120,90,230)
+    scroll.CanvasSize = UDim2.new(0,0,0,0); scroll.AutomaticCanvasSize = Enum.AutomaticSize.Y; scroll.Parent = panel
+    Instance.new("UICorner", scroll).CornerRadius = UDim.new(0, 6)
+    local layout = Instance.new("UIListLayout"); layout.Padding = UDim.new(0, 2); layout.SortOrder = Enum.SortOrder.LayoutOrder; layout.Parent = scroll
+    local ppad = Instance.new("UIPadding"); ppad.PaddingTop = UDim.new(0,3); ppad.PaddingBottom = UDim.new(0,3); ppad.PaddingLeft = UDim.new(0,3); ppad.PaddingRight = UDim.new(0,3); ppad.Parent = scroll
+    local function feedback(key)
+        if MESHES[key] then
+            statusLabel.TextColor3 = Color3.fromRGB(150,230,170)
+            statusLabel.Text = "Spawned " .. key .. (MESHES[key].Model and " [full]" or "") .. " — equip it in your inventory (rarity tab)."
+        else
+            statusLabel.TextColor3 = Color3.fromRGB(240,200,120)
+            statusLabel.Text = "Spawned " .. key .. " (no mesh data)."
+        end
     end
-    spawnBtn.MouseButton1Click:Connect(spawnBoth)
+    local function spawnFromBox()
+        local key = resolveInput(box.Text)
+        if not key then statusLabel.TextColor3 = Color3.fromRGB(255,120,120); statusLabel.Text = "Unknown: \"" .. tostring(box.Text) .. "\" — use Browse."; return end
+        spawnWeapon(key, 1); feedback(key)
+    end
+    spawnBtn.MouseButton1Click:Connect(spawnFromBox)
+    box.FocusLost:Connect(function(e) if e then spawnFromBox() end end)
+    local built, buttons = false, {}
+    local function buildList()
+        if built then return end
+        built = true
+        task.spawn(function()
+            for i, wv in ipairs(weaponList) do
+                local btn = Instance.new("TextButton")
+                btn.Size = UDim2.new(1, -6, 0, 22)
+                btn.BackgroundColor3 = wv.type == "Knife" and Color3.fromRGB(48,44,70) or Color3.fromRGB(44,56,72)
+                btn.BackgroundTransparency = 0.25; btn.Font = Enum.Font.Gotham; btn.TextSize = 12
+                btn.TextColor3 = Color3.fromRGB(235,235,245); btn.TextXAlignment = Enum.TextXAlignment.Left; btn.TextTruncate = Enum.TextTruncate.AtEnd
+                btn.Text = "  " .. wv.name .. "   -  " .. wv.rarity .. " " .. wv.type
+                btn.LayoutOrder = i; btn.Parent = scroll
+                Instance.new("UICorner", btn).CornerRadius = UDim.new(0, 4)
+                local key = wv.key
+                btn.MouseButton1Click:Connect(function()
+                    spawnWeapon(key, 1); feedback(key)
+                    local o = btn.BackgroundColor3; btn.BackgroundColor3 = Color3.fromRGB(0,150,100)
+                    task.delay(0.18, function() if btn.Parent then btn.BackgroundColor3 = o end end)
+                end)
+                buttons[#buttons+1] = { btn = btn, hay = (wv.key .. " " .. wv.name):lower() }
+                if i % 60 == 0 then task.wait() end
+            end
+        end)
+    end
+    browseBtn.MouseButton1Click:Connect(function()
+        panel.Visible = not panel.Visible
+        browseBtn.Text = "Browse all weapons (" .. #weaponList .. ")  " .. (panel.Visible and "^" or "v")
+        if panel.Visible then buildList() end
+    end)
+    search:GetPropertyChangedSignal("Text"):Connect(function()
+        local q = search.Text:lower():gsub("^%s+",""):gsub("%s+$","")
+        for _, b in ipairs(buttons) do b.btn.Visible = (q == "") or (b.hay:find(q, 1, true) ~= nil) end
+    end)
 end
 function setStatus(t, color)
     if statusLabel then statusLabel.Text = t; statusLabel.TextColor3 = color or Color3.fromRGB(190,190,205) end
