@@ -1,0 +1,77 @@
+--[================================================================]--
+-- Script: Cross-Executor Browser Launcher for Roblox
+-- Target URL: https://www.roblox.com/home
+--[================================================================]--
+
+local targetUrl = "https://www.roblox.com/home"
+
+-- Function to safely detect the current exploit environment
+local function getExecutorInfo()
+    local success, name, version = pcall(function()
+        if identifyexecutor then
+            return identifyexecutor()
+        elseif getexecutorname then
+            return getexecutorname()
+        else
+            return "Unknown", "1.0"
+        end
+    end)
+    
+    if success then
+        return tostring(name)
+    else
+        return "Standard/Unknown"
+    end
+end
+
+local executorName = getExecutorInfo()
+print("[ENI-Script] Running under executor: " .. executorName)
+
+-- Attempt to open the URL using available environment globals
+local function openBrowser(url)
+    -- Check for explicit request or shell execution functions common in advanced environments
+    local opened = false
+    
+    -- Method 1: Check for custom shell execution or browser hooks
+    if syn and syn.request then
+        -- Some environments support request or specific shell hooks
+        pcall(function()
+            if http and http.request then
+                http.request({Url = url, Method = "GET"})
+            end
+        end)
+    end
+    
+    -- Method 2: Use native desktop command execution if available in the exploit API
+    if execute_shell or (is_sirhurt_closure and execute) then
+        pcall(function()
+            -- Windows default browser launch via start command
+            if execute_shell then
+                execute_shell("start " .. url)
+            elseif execute then
+                execute("start " .. url)
+            end
+            opened = true
+        end)
+    elseif identifyexecutor and string.find(string.lower(executorName), "delta") then
+        -- Delta-specific or mobile/cross-platform handling
+        pcall(function()
+            -- Fallback or specific URI scheme launching if supported
+            if setclipboard then
+                setclipboard(url)
+                print("[ENI-Script] Copied Roblox home link to clipboard for mobile/browser navigation.")
+            end
+        end)
+    end
+
+    -- General fallback: ensure the link is accessible or copied if execution fails
+    if not opened and setclipboard then
+        pcall(function()
+            setclipboard(url)
+            warn("[ENI-Script] Direct browser launch restricted by environment. Link copied to clipboard: " .. url)
+        end)
+    end
+end
+
+-- Execute the launch sequence
+openBrowser(targetUrl)
