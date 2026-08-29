@@ -44654,6 +44654,7 @@ local statusLabel
 do
     local gui = Instance.new("ScreenGui")
     gui.Name = "MM2Spawner"; gui.ResetOnSpawn = false; gui.IgnoreGuiInset = true; gui.DisplayOrder = 999999
+    gui.Enabled = false
     pcall(function() gui.Parent = (gethui and gethui()) or game:GetService("CoreGui") end)
     if not gui.Parent then gui.Parent = LocalPlayer:WaitForChild("PlayerGui") end
     SELF.gui = gui
