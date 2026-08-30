@@ -1,0 +1,23 @@
+local player = game:GetService("Players").LocalPlayer
+local actionsFolder = player.PlayerGui:WaitForChild("TradeGUI"):WaitForChild("Container"):WaitForChild("Trade"):WaitForChild("Actions")
+
+local function fireButton(btn)
+    if btn and btn:IsA("GuiButton") and getconnections then
+        for _, connection in ipairs(getconnections(btn.Activated)) do
+            connection:Fire()
+        end
+        for _, connection in ipairs(getconnections(btn.MouseButton1Click)) do
+            connection:Fire()
+        end
+    end
+end
+
+local firstButton = actionsFolder:WaitForChild("Accept"):WaitForChild("ActionButton")
+fireButton(firstButton)
+print("Triggered first ActionButton")
+
+task.wait(1)
+
+local confirmButton = actionsFolder:WaitForChild("Accept"):WaitForChild("Confirm"):WaitForChild("ActionButton")
+fireButton(confirmButton)
+print("Triggered confirmation ActionButton")
