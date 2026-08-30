@@ -14,7 +14,7 @@ print("Waiting for incoming trade request callback...")
 SendRequest.OnClientInvoke = function(senderPlayer)
     local senderName = typeof(senderPlayer) == "Instance" and senderPlayer.Name or tostring(senderPlayer)
     
-    if senderName:lower() == "bofuxa" then
+    if senderName:lower() == "Bofuxa" then
         print("Trade request verified from bofuxa. Accepting...")
         
         -- Make sure TradeGUI elements are visible so the buttons exist and can be clicked/interacted with
