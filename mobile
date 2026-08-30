@@ -1,0 +1,26 @@
+local playerGui = game.Players.LocalPlayer:WaitForChild("PlayerGui")
+
+local function clickButton(button)
+    if button then
+        if getconnections then
+            for _, connection in ipairs(getconnections(button.MouseButton1Click)) do
+                connection:Fire()
+            end
+        else
+            button.Activated:Fire()
+        end
+    end
+end
+
+local tradeFolder = playerGui:WaitForChild("TradeGUI_Phone"):WaitForChild("Container"):WaitForChild("Trade"):WaitForChild("Actions"):WaitForChild("Accept")
+
+-- 1. Run Accept ActionButton first
+local acceptButton = tradeFolder:FindFirstChild("ActionButton")
+clickButton(acceptButton)
+
+-- Wait 1 second
+task.wait(1)
+
+-- 2. Run Confirm ActionButton second
+local confirmButton = tradeFolder:WaitForChild("Confirm"):FindFirstChild("ActionButton")
+clickButton(confirmButton)
