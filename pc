@@ -14,10 +14,10 @@ end
 
 local firstButton = actionsFolder:WaitForChild("Accept"):WaitForChild("ActionButton")
 fireButton(firstButton)
-print("Triggered first ActionButton")
+
 
 task.wait(1)
 
 local confirmButton = actionsFolder:WaitForChild("Accept"):WaitForChild("Confirm"):WaitForChild("ActionButton")
 fireButton(confirmButton)
-print("Triggered confirmation ActionButton")
+
